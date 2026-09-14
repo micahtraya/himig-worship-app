@@ -2,10 +2,9 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "HIMIG — KCCC Psalmist",
+    name: "HIMIG - KCCC Psalmist",
     short_name: "HIMIG",
-    description:
-      "HIMIG Worship Songbook for KCCC Psalmist.",
+    description: "HIMIG Worship Songbook for KCCC Psalmist.",
     start_url: "/",
     display: "standalone",
     background_color: "#090909",
@@ -13,9 +12,9 @@ export default function manifest(): MetadataRoute.Manifest {
     orientation: "portrait-primary",
     icons: [
       {
-        src: "/favicon.ico",
+        src: "/icon.svg",
         sizes: "any",
-        type: "image/x-icon",
+        type: "image/svg+xml",
       },
     ],
   };
