@@ -13,10 +13,33 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "HIMIG — KCCC Psalmist",
+  title: "HIMIG â€” KCCC Psalmist",
   description:
     "HIMIG Worship Songbook for KCCC Psalmist.",
   applicationName: "HIMIG",
+
+  icons: {
+    icon: [
+      {
+        url: "/himig-icon-192.png",
+        sizes: "192x192",
+        type: "image/png",
+      },
+      {
+        url: "/himig-icon-512.png",
+        sizes: "512x512",
+        type: "image/png",
+      },
+    ],
+    apple: [
+      {
+        url: "/himig-icon-192.png",
+        sizes: "192x192",
+        type: "image/png",
+      },
+    ],
+  },
+
   appleWebApp: {
     capable: true,
     title: "HIMIG",
