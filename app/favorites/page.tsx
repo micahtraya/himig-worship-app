@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { createClient } from "@/lib/supabase";
 import type { Song } from "@/lib/songs";
 
@@ -133,8 +134,14 @@ useEffect(() => {
 
               <div className="flex items-center gap-3">
 
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-neutral-700 bg-neutral-900 text-xl text-white">
-                  ♪
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-neutral-700 bg-neutral-900 overflow-hidden">
+                  <Image
+    src="/icon.svg"
+    alt="HIMIG"
+    width={40}
+    height={40}
+    className="h-10 w-10"
+  />
                 </div>
 
                 <div>
@@ -261,8 +268,14 @@ useEffect(() => {
                 className="flex items-center gap-3"
               >
 
-                <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-neutral-700 bg-neutral-900 font-bold">
-                  ♪
+                <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-neutral-700 bg-neutral-900 overflow-hidden">
+                  <Image
+    src="/icon.svg"
+    alt="HIMIG"
+    width={36}
+    height={36}
+    className="h-9 w-9"
+  />
                 </div>
 
                 <div>
@@ -473,3 +486,6 @@ useEffect(() => {
     </div>
   );
 }
+
+
+
