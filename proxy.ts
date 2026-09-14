@@ -18,10 +18,7 @@ export async function proxy(request: NextRequest) {
         setAll(cookiesToSet) {
           cookiesToSet.forEach(
             ({ name, value }) => {
-              request.cookies.set(
-                name,
-                value
-              );
+              request.cookies.set(name, value);
             }
           );
 
@@ -47,17 +44,13 @@ export async function proxy(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const pathname =
-    request.nextUrl.pathname;
+  const pathname = request.nextUrl.pathname;
 
-  const isLoginPage =
-    pathname === "/login";
+  const isLoginPage = pathname === "/login";
 
-  const isAuthCallback =
-    pathname === "/auth/callback";
+  const isAuthCallback = pathname === "/auth/callback";
 
-  const isSetPasswordPage =
-    pathname === "/auth/set-password";
+  const isSetPasswordPage = pathname === "/auth/set-password";
 
   /*
    * INVITATION / PASSWORD SETUP
@@ -85,9 +78,7 @@ export async function proxy(request: NextRequest) {
     loginUrl.pathname = "/login";
     loginUrl.search = "";
 
-    return NextResponse.redirect(
-      loginUrl
-    );
+    return NextResponse.redirect(loginUrl);
   }
 
   /*
@@ -107,9 +98,7 @@ export async function proxy(request: NextRequest) {
     dashboardUrl.pathname = "/";
     dashboardUrl.search = "";
 
-    return NextResponse.redirect(
-      dashboardUrl
-    );
+    return NextResponse.redirect(dashboardUrl);
   }
 
   return supabaseResponse;
@@ -119,8 +108,9 @@ export const config = {
   matcher: [
     /*
      * Run on application routes while excluding
-     * Next.js internals and static files.
+     * Next.js internals, static files, and the
+     * PWA manifest.
      */
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    "/((?!_next/static|_next/image|favicon.ico|manifest.webmanifest|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };
