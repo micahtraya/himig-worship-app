@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <linearGradient
+      id="himigRestGradient"
+      x1="0"
+      y1="0"
+      x2="1"
+      y2="1"
+    >
+      <stop offset="0%" stop-color="#67e8f9"/>
+      <stop offset="55%" stop-color="#22d3ee"/>
+      <stop offset="100%" stop-color="#2563eb"/>
+    </linearGradient>
+  </defs>
+
+  <rect
+    width="64"
+    height="64"
+    rx="14"
+    fill="#09090b"
+  />
+
+  <path
+    d="M31 7
+       C39 13 48 19 49 27
+       C50 34 44 38 37 41
+       C31 44 29 47 33 52
+       C36 56 40 59 42 61
+       C33 58 25 54 20 49
+       C15 44 16 39 22 35
+       C27 32 31 30 30 26
+       C29 21 23 18 18 16
+       C23 14 27 11 31 7Z"
+    fill="url(#himigRestGradient)"
+  />
+</svg>
