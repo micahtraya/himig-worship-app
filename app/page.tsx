@@ -25,7 +25,6 @@ export default function DashboardPage() {
   const [currentRole, setCurrentRole] =
     useState<HimigRole>("Owner/Admin");
 
-  
   useEffect(() => {
     async function loadDashboardData() {
       /*
@@ -218,7 +217,6 @@ export default function DashboardPage() {
     }, 0);
   }, []);
 
-
   /*
    * UPCOMING SETLISTS
    *
@@ -232,12 +230,12 @@ export default function DashboardPage() {
   today.setHours(0, 0, 0, 0);
 
   const upcomingSetlists = [...setlists]
-  .filter((setlist) => {
-    return setlist.date >= today.toISOString().slice(0, 10);
-  })
-  .sort((a, b) => {
-    return a.date.localeCompare(b.date);
-  });
+    .filter((setlist) => {
+      return setlist.date >= today.toISOString().slice(0, 10);
+    })
+    .sort((a, b) => {
+      return a.date.localeCompare(b.date);
+    });
 
   return (
     <div className="min-h-screen bg-[#090909] text-white">
@@ -248,8 +246,50 @@ export default function DashboardPage() {
           <div className="border-b border-neutral-800 px-6 py-6">
             <Link href="/" className="block">
               <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-neutral-700 bg-neutral-900 text-xl text-white">
-                  ♪
+                {/* ONLY CHANGE: DASHBOARD REST NOTE LOGO */}
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-neutral-700 bg-[#090909]">
+                  <svg
+                    viewBox="0 0 64 64"
+                    className="h-7 w-7"
+                    aria-hidden="true"
+                  >
+                    <defs>
+                      <linearGradient
+                        id="himigRestGradient"
+                        x1="0"
+                        y1="0"
+                        x2="1"
+                        y2="1"
+                      >
+                        <stop
+                          offset="0%"
+                          stopColor="#67e8f9"
+                        />
+                        <stop
+                          offset="55%"
+                          stopColor="#22d3ee"
+                        />
+                        <stop
+                          offset="100%"
+                          stopColor="#2563eb"
+                        />
+                      </linearGradient>
+                    </defs>
+
+                    <path
+                      d="M31 7
+                         C39 13 48 19 49 27
+                         C50 34 44 38 37 41
+                         C31 44 29 47 33 52
+                         C36 56 40 59 42 61
+                         C33 58 25 54 20 49
+                         C15 44 16 39 22 35
+                         C27 32 31 30 30 26
+                         C29 21 23 18 18 16
+                         C23 14 27 11 31 7Z"
+                      fill="url(#himigRestGradient)"
+                    />
+                  </svg>
                 </div>
 
                 <div>
@@ -356,8 +396,50 @@ export default function DashboardPage() {
                 href="/"
                 className="flex items-center gap-3"
               >
-                <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-neutral-700 bg-neutral-900 font-bold">
-                  ♪
+                {/* ONLY CHANGE: MOBILE DASHBOARD REST NOTE LOGO */}
+                <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-neutral-700 bg-[#090909]">
+                  <svg
+                    viewBox="0 0 64 64"
+                    className="h-6 w-6"
+                    aria-hidden="true"
+                  >
+                    <defs>
+                      <linearGradient
+                        id="himigRestGradientMobile"
+                        x1="0"
+                        y1="0"
+                        x2="1"
+                        y2="1"
+                      >
+                        <stop
+                          offset="0%"
+                          stopColor="#67e8f9"
+                        />
+                        <stop
+                          offset="55%"
+                          stopColor="#22d3ee"
+                        />
+                        <stop
+                          offset="100%"
+                          stopColor="#2563eb"
+                        />
+                      </linearGradient>
+                    </defs>
+
+                    <path
+                      d="M31 7
+                         C39 13 48 19 49 27
+                         C50 34 44 38 37 41
+                         C31 44 29 47 33 52
+                         C36 56 40 59 42 61
+                         C33 58 25 54 20 49
+                         C15 44 16 39 22 35
+                         C27 32 31 30 30 26
+                         C29 21 23 18 18 16
+                         C23 14 27 11 31 7Z"
+                      fill="url(#himigRestGradientMobile)"
+                    />
+                  </svg>
                 </div>
 
                 <div>
