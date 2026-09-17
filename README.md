@@ -10,40 +10,52 @@ Built for **KCCC Psalmist**, HIMIG combines a modern web application experience 
 
 ## ✨ Features
 
-### Login / Authentication
+### 🔐 Login / Authentication
 
-<img width="648" height="616" alt="image" src="https://github.com/user-attachments/assets/28f69148-3a06-4962-94ae-09d53b538ec7" />
+<img width="648" height="616" alt="HIMIG Login and Authentication" src="https://github.com/user-attachments/assets/28f69148-3a06-4962-94ae-09d53b538ec7" />
 
-### Dashboard
+Secure team authentication using Supabase Auth.
 
-<img width="1746" height="882" alt="image" src="https://github.com/user-attachments/assets/0324cd31-31f0-406c-91ca-986499b2e051" />
+---
+
+### 🏠 Dashboard
+
+<img width="1746" height="882" alt="HIMIG Dashboard" src="https://github.com/user-attachments/assets/0324cd31-31f0-406c-91ca-986499b2e051" />
+
+The dashboard provides a central overview of the worship team's songs, favorites, setlists, and team workspace.
+
+---
 
 ### 🎵 Song Library
 
-<img width="1766" height="885" alt="image" src="https://github.com/user-attachments/assets/846c49c0-d203-4abb-9ec6-d1d2207c0d3a" />
+<img width="1766" height="885" alt="HIMIG Song Library" src="https://github.com/user-attachments/assets/846c49c0-d203-4abb-9ec6-d1d2207c0d3a" />
 
-* Shared worship song library
-* Song details including:
+HIMIG provides a shared worship song library containing:
 
-  * Lyrics
-  * Chords
-  * Key
-  * Artist
-  * Language
-  * Category
-  * BPM
-  * Time signature
-  * Nashville Number Code
-  * Tabs
-* Add and edit songs according to team permissions
+* Lyrics
+* Chords
+* Key
+* Artist
+* Language
+* Category
+* BPM
+* Time signature
+* Nashville Number Code
+* Tabs
+
+Additional functionality includes:
+
 * Song search and browsing
 * Individual song pages
+* Add and edit songs according to team permissions
+
+---
 
 ### 🎼 Chord & Key Transposition
 
-<img width="1088" height="824" alt="image" src="https://github.com/user-attachments/assets/90cfa3f5-abd1-4512-bf6b-8fc0df519c60" />
+<img width="1088" height="824" alt="HIMIG Chord and Key Transposition" src="https://github.com/user-attachments/assets/90cfa3f5-abd1-4512-bf6b-8fc0df519c60" />
 
-HIMIG includes a dedicated chord engine that supports:
+HIMIG includes a dedicated chord engine supporting:
 
 * Key-aware chord transposition
 * Sharp and flat notation
@@ -51,13 +63,15 @@ HIMIG includes a dedicated chord engine that supports:
 * Chord qualities and extensions
 * Slash chords
 * Key normalization
-* Automatic musical note spelling preferences
+* Musical note spelling preferences
 
-This allows musicians to quickly adapt songs to the required service key.
+This allows musicians to adapt songs to the required service key without modifying the original song data.
+
+---
 
 ### 📋 Setlists
 
-<img width="1053" height="372" alt="image" src="https://github.com/user-attachments/assets/90e47c77-6bb5-40da-97c6-2177c4b4d269" />
+<img width="1053" height="372" alt="HIMIG Setlists" src="https://github.com/user-attachments/assets/90e47c77-6bb5-40da-97c6-2177c4b4d269" />
 
 Teams can create and manage shared worship setlists.
 
@@ -67,18 +81,20 @@ Setlist functionality includes:
 * Add songs
 * Arrange song order
 * Configure service dates
-* Add descriptions/notes
+* Add descriptions and notes
 * Configure service keys
 * Open individual setlist details
 * Launch Worship Mode
 
-Setlist permissions are controlled according to the user's team role.
+Setlist access is controlled according to the user's team role.
+
+---
 
 ### 🎤 Worship Mode
 
-<img width="1066" height="885" alt="image" src="https://github.com/user-attachments/assets/007169e5-78ec-45a4-91e0-c60b75c4d98b" />
+<img width="1066" height="885" alt="HIMIG Worship Mode" src="https://github.com/user-attachments/assets/007169e5-78ec-45a4-91e0-c60b75c4d98b" />
 
-Worship Mode provides a focused experience for using a setlist during a live worship service.
+Worship Mode provides a focused interface for using a setlist during a live worship service.
 
 It supports:
 
@@ -91,12 +107,15 @@ It supports:
 * Tabs
 * Musician-focused song information
 
-The chord engine allows the displayed music to be transposed without changing the original song data.
+The transposition engine changes the displayed musical content without changing the original song data.
+
+---
 
 ### 👥 Team Roles & Permissions
 
-<img width="648" height="758" alt="image" src="https://github.com/user-attachments/assets/f0e758fe-d421-45d0-b49d-d1a046e665ae" />
-<img width="838" height="870" alt="image" src="https://github.com/user-attachments/assets/25473270-c7df-4a36-a914-69a1d08050b3" />
+<img width="648" height="758" alt="HIMIG Team Roles" src="https://github.com/user-attachments/assets/f0e758fe-d421-45d0-b49d-d1a046e665ae" />
+
+<img width="838" height="870" alt="HIMIG Permission Controls" src="https://github.com/user-attachments/assets/25473270-c7df-4a36-a914-69a1d08050b3" />
 
 HIMIG uses role-based access control with four team roles:
 
@@ -107,46 +126,54 @@ HIMIG uses role-based access control with four team roles:
 | **Musician**       | Chords, tabs, Nashville Number Code and shared setlists |
 | **Viewer**         | View-only access                                        |
 
-Permissions are implemented in the application and supported by database security controls.
+Application-level permissions are reinforced by database security controls.
+
+See the detailed [Role Permissions](docs/role-permissions.md) documentation for the complete permission model.
+
+---
 
 ### ❤️ Personal Features
 
 Users can maintain personal worship resources including:
 
-* Favorites
-  
-<img width="857" height="290" alt="image" src="https://github.com/user-attachments/assets/82d538bd-3266-443d-b9fd-570fb43e7e1c" />
+**Favorites**
 
-* Personal notes
-  
-  <img width="750" height="316" alt="image" src="https://github.com/user-attachments/assets/0839e75a-b314-47d0-a17d-074271e1fda1" />
+<img width="857" height="290" alt="HIMIG Favorites" src="https://github.com/user-attachments/assets/82d538bd-3266-443d-b9fd-570fb43e7e1c" />
 
-* Personal song preferences
-  
-<img width="798" height="763" alt="image" src="https://github.com/user-attachments/assets/fa5b69c7-0144-414c-8e5a-80fb950606fe" />
+**Personal Notes**
 
-These personal features are associated with the authenticated user.
+<img width="750" height="316" alt="HIMIG Personal Notes" src="https://github.com/user-attachments/assets/0839e75a-b314-47d0-a17d-074271e1fda1" />
+
+**Personal Song Preferences**
+
+<img width="798" height="763" alt="HIMIG Personal Song Preferences" src="https://github.com/user-attachments/assets/fa5b69c7-0144-414c-8e5a-80fb950606fe" />
+
+These personal features are associated with the authenticated user and are separate from shared team resources.
+
+---
 
 ### 📱 Mobile & PWA Experience
 
-HIMIG includes a mobile-focused navigation experience designed for smartphones and tablets.
+<img width="971" height="2048" alt="HIMIG Mobile Navigation" src="https://github.com/user-attachments/assets/d87d9119-beab-48b9-b690-b934c16bb8fd" />
 
-Mobile users can:
+HIMIG provides a responsive mobile experience designed for smartphones and tablets.
 
-<img width="971" height="2048" alt="e27354bc-8bb8-4f2e-983f-5d0430a87f12" src="https://github.com/user-attachments/assets/d87d9119-beab-48b9-b690-b934c16bb8fd" />
+Mobile navigation supports:
 
 * Swipe from the left edge to open navigation
 * Swipe left to close the navigation drawer
 * Tap outside the drawer to close it
-* Quickly access major sections of the application
+* Quick access to major application sections
 
-The application also includes Progressive Web App support and HIMIG REST NOTE branding for a more app-like mobile experience.
+The application also includes Progressive Web App support and REST NOTE branding for an app-like mobile experience.
+
+---
 
 ### 🎨 REST NOTE Branding
 
 HIMIG uses a custom **REST NOTE** visual identity featuring a clean dark interface with a blue/cyan accent.
 
-The branding is used across the application and mobile/PWA experience.
+The branding extends across the web application and mobile/PWA experience.
 
 ---
 
@@ -181,56 +208,66 @@ The branding is used across the application and mobile/PWA experience.
 
 ---
 
-# 🏗 Application Architecture
-
-HIMIG uses a modern Next.js App Router architecture.
+# 🏗 High-Level Architecture
 
 ```text
-HIMIG
-│
-├── app/
-│   ├── login/
-│   ├── songs/
-│   ├── setlists/
-│   ├── favorites/
-│   ├── team/
-│   └── api/
-│
-├── components/
-│   └── MobileNavDrawer.tsx
-│
-├── lib/
-│   ├── auth.ts
-│   ├── chords.ts
-│   ├── permissions.ts
-│   ├── profile.ts
-│   ├── songs.ts
-│   ├── song-import.ts
-│   ├── supabase.ts
-│   └── supabaseAdmin.ts
-│
-└── public/
-    └── HIMIG PWA assets
+                         HIMIG Users
+                              │
+                              ▼
+                  ┌──────────────────────┐
+                  │      Next.js App     │
+                  │ App Router / React / │
+                  │ TypeScript / Tailwind│
+                  └──────────┬───────────┘
+                             │
+              ┌──────────────┼──────────────┐
+              │              │              │
+              ▼              ▼              ▼
+       Supabase Auth    Application      Mobile / PWA
+       User Sessions       Logic          Experience
+              │              │
+              │       ┌──────┼──────┐
+              │       │      │      │
+              │      Songs Setlists Worship
+              │                    Mode
+              │
+              └──────────────┬──────────────┘
+                             ▼
+                  ┌──────────────────────┐
+                  │       Supabase       │
+                  │                      │
+                  │ PostgreSQL Database  │
+                  │ Row Level Security   │
+                  │ Database Functions   │
+                  │ Permission Triggers  │
+                  └──────────────────────┘
+                             │
+                             ▼
+                  ┌──────────────────────┐
+                  │        Vercel        │
+                  │ Production Hosting   │
+                  └──────────────────────┘
 ```
 
-The application separates UI, authentication, music-processing logic, permissions, and Supabase data access into dedicated modules.
+For the detailed technical architecture, see [Architecture Documentation](docs/architecture.md).
 
 ---
 
-# 🔐 Security & Access Control
+# 🔐 Security
 
-HIMIG uses authenticated user accounts and database-level access controls to protect application data.
-
-The system includes:
+HIMIG uses multiple layers of application and database security:
 
 * Supabase Authentication
-* User profiles
+* User profiles and roles
 * Role-based application permissions
 * PostgreSQL Row Level Security
-* User-specific access for personal data
-* Protected team and shared resources
+* User-specific access controls for personal data
+* Database functions
+* Database-level permission enforcement
 
-The permission system is designed around the responsibilities of worship team members rather than providing every user with unrestricted editing access.
+The frontend provides the appropriate user experience for each role, while Supabase/PostgreSQL provides the database security boundary.
+
+See [Security & RLS](docs/security-and-rls.md) for the detailed security architecture.
 
 ---
 
@@ -247,7 +284,7 @@ HIMIG was created to address common challenges faced by worship teams when manag
 * Team collaboration
 * Mobile access during services
 
-The goal is to provide worship teams with a single platform for organizing their musical resources before and during worship services.
+The goal is to provide worship teams with a single platform for organizing musical resources before and during worship services.
 
 ---
 
@@ -280,7 +317,18 @@ HIMIG is an actively developed application currently implemented for **KCCC Psal
 
 The current version provides the foundation for future expansion, including the possibility of supporting additional worship teams and church organizations.
 
-Future product development may include organization-based workspaces, church onboarding, organization-specific branding, and additional administrative capabilities.
+Future development may include organization-based workspaces, church onboarding, organization-specific branding, and additional administrative capabilities.
+
+---
+
+# 📚 Documentation
+
+* [Architecture](docs/architecture.md)
+* [Security & RLS](docs/security-and-rls.md)
+* [Role Permissions](docs/role-permissions.md)
+* [Mobile & PWA](docs/mobile-pwa.md)
+* HIMIG Case Study *(coming next)*
+* Portfolio Presentation *(coming later)*
 
 ---
 
