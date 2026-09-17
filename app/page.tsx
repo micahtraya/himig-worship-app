@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from "next/link";
@@ -24,14 +25,46 @@ export default function DashboardPage() {
   const [teamCount, setTeamCount] = useState(1);
   const [currentRole, setCurrentRole] =
     useState<HimigRole>("Owner/Admin");
+  const [organizationName, setOrganizationName] =
+    useState("KCCC Psalmist");
 
   useEffect(() => {
     async function loadDashboardData() {
       /*
+       * CURRENT HIMIG USER
+       *
+       * This now provides:
+       * - authenticated user ID
+       * - organization ID
+       * - organization name
+       * - organization role
+       */
+      const currentUser = await getCurrentHimigUser();
+
+      if (!currentUser) {
+        console.error(
+          "Unable to load current HIMIG user."
+        );
+        return;
+      }
+
+      const {
+        id: userId,
+        organizationId,
+        organizationName,
+        role,
+      } = currentUser;
+
+      setCurrentRole(role);
+      setOrganizationName(organizationName);
+
+      /*
        * SONG COUNT
        *
-       * Supabase is now the source of truth for the
-       * shared Song Library.
+       * Supabase is the source of truth for the shared
+       * Song Library.
+       *
+       * The organization ID explicitly scopes the query.
        */
       const { count: songsCount, error: songsError } =
         await supabase
@@ -39,7 +72,8 @@ export default function DashboardPage() {
           .select("id", {
             count: "exact",
             head: true,
-          });
+          })
+          .eq("organization_id", organizationId);
 
       if (songsError) {
         console.error(
@@ -51,91 +85,38 @@ export default function DashboardPage() {
       }
 
       /*
-       * CURRENT AUTHENTICATED USER
-       *
-       * Used for the personal Favorites count.
-       */
-      const {
-        data: { user },
-        error: userError,
-      } = await supabase.auth.getUser();
-
-      if (userError) {
-        console.error(
-          "Unable to load authenticated user:",
-          userError
-        );
-      }
-
-      /*
        * FAVORITES COUNT
        *
-       * Favorites are personal, so only count the
-       * logged-in user's favorites.
-       */
-      if (user) {
-        const {
-          count: favoritesCount,
-          error: favoritesError,
-        } = await supabase
-          .from("favorites")
-          .select("song_id", {
-            count: "exact",
-            head: true,
-          })
-          .eq("user_id", user.id);
-
-        if (favoritesError) {
-          console.error(
-            "Unable to load favorite count:",
-            favoritesError
-          );
-        } else {
-          setFavoriteCount(favoritesCount ?? 0);
-        }
-      } else {
-        setFavoriteCount(0);
-      }
-
-      /*
-       * SETLIST SONGS
-       *
-       * Load the songs belonging to each setlist so
-       * the Dashboard can display the correct song count
-       * inside each Upcoming Setlist card.
+       * Favorites remain personal.
+       * Only the logged-in user's favorites are counted.
        */
       const {
-        data: setlistSongRows,
-        error: setlistSongsError,
+        count: favoritesCount,
+        error: favoritesError,
       } = await supabase
-        .from("setlist_songs")
-        .select("setlist_id, song_id, position")
-        .order("position", {
-          ascending: true,
-        });
+        .from("favorites")
+        .select("song_id", {
+          count: "exact",
+          head: true,
+        })
+        .eq("user_id", userId);
 
-      if (setlistSongsError) {
+      if (favoritesError) {
         console.error(
-          "Unable to load setlist songs:",
-          setlistSongsError
+          "Unable to load favorite count:",
+          favoritesError
         );
-      }
-
-      const songsBySetlist: Record<string, string[]> = {};
-
-      for (const row of setlistSongRows ?? []) {
-        if (!songsBySetlist[row.setlist_id]) {
-          songsBySetlist[row.setlist_id] = [];
-        }
-
-        songsBySetlist[row.setlist_id].push(row.song_id);
+      } else {
+        setFavoriteCount(favoritesCount ?? 0);
       }
 
       /*
        * SETLISTS
        *
-       * Supabase is now the source of truth for shared
+       * Supabase is the source of truth for shared
        * Setlists.
+       *
+       * The organization ID explicitly scopes the query.
        */
       const {
         data: setlistRows,
@@ -145,6 +126,7 @@ export default function DashboardPage() {
         .select(
           "id, name, service_date, description, created_at"
         )
+        .eq("organization_id", organizationId)
         .order("service_date", {
           ascending: true,
           nullsFirst: false,
@@ -155,7 +137,50 @@ export default function DashboardPage() {
           "Unable to load setlists:",
           setlistsError
         );
-      } else {
+      }
+
+      /*
+       * SETLIST SONGS
+       *
+       * Only load songs belonging to the setlists that
+       * were already confirmed to belong to this
+       * organization.
+       */
+      const setlistIds = (setlistRows ?? []).map(
+        (setlist) => setlist.id
+      );
+
+      const songsBySetlist: Record<string, string[]> = {};
+
+      if (setlistIds.length > 0) {
+        const {
+          data: setlistSongRows,
+          error: setlistSongsError,
+        } = await supabase
+          .from("setlist_songs")
+          .select("setlist_id, song_id, position")
+          .in("setlist_id", setlistIds)
+          .order("position", {
+            ascending: true,
+          });
+
+        if (setlistSongsError) {
+          console.error(
+            "Unable to load setlist songs:",
+            setlistSongsError
+          );
+        }
+
+        for (const row of setlistSongRows ?? []) {
+          if (!songsBySetlist[row.setlist_id]) {
+            songsBySetlist[row.setlist_id] = [];
+          }
+
+          songsBySetlist[row.setlist_id].push(row.song_id);
+        }
+      }
+
+      if (!setlistsError) {
         const mappedSetlists: Setlist[] = (
           setlistRows ?? []
         ).map((setlist) => ({
@@ -175,45 +200,38 @@ export default function DashboardPage() {
       /*
        * TEAM MEMBERS
        *
-       * Team management is still using the existing
-       * localStorage data for now.
+       * Team membership is now organization-aware.
+       * The organization_members table is the source
+       * of truth instead of localStorage.
        */
-      try {
-        const storedTeam =
-          localStorage.getItem("himigTeamMembers");
-
-        if (storedTeam) {
-          const team = JSON.parse(storedTeam);
-
-          if (Array.isArray(team)) {
-            setTeamCount(team.length);
-          }
-        }
-      } catch {
-        console.error("Unable to load team members.");
-      }
-
-      /*
-       * CURRENT HIMIG ROLE
-       *
-       * Leave the existing role logic untouched.
-       */
-      getCurrentHimigUser()
-        .then((currentUser) => {
-          if (currentUser) {
-            setCurrentRole(currentUser.role);
-          }
+      const {
+        count: membersCount,
+        error: membersError,
+      } = await supabase
+        .from("organization_members")
+        .select("id", {
+          count: "exact",
+          head: true,
         })
-        .catch((error) => {
-          console.error(
-            "Unable to load current HIMIG user:",
-            error
-          );
-        });
+        .eq("organization_id", organizationId);
+
+      if (membersError) {
+        console.error(
+          "Unable to load organization member count:",
+          membersError
+        );
+      } else {
+        setTeamCount(membersCount ?? 0);
+      }
     }
 
     window.setTimeout(() => {
-      void loadDashboardData();
+      void loadDashboardData().catch((error) => {
+        console.error(
+          "Unable to load dashboard data:",
+          error
+        );
+      });
     }, 0);
   }, []);
 
@@ -246,7 +264,7 @@ export default function DashboardPage() {
           <div className="border-b border-neutral-800 px-6 py-6">
             <Link href="/" className="block">
               <div className="flex items-center gap-3">
-                {/* ONLY CHANGE: DASHBOARD REST NOTE LOGO */}
+                {/* REST NOTE LOGO */}
                 <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-neutral-700 bg-[#090909]">
                   <svg
                     viewBox="0 0 64 64"
@@ -377,7 +395,7 @@ export default function DashboardPage() {
               </p>
 
               <p className="mt-1 font-semibold text-white">
-                KCCC Psalmist
+                {organizationName}
               </p>
 
               <p className="mt-1 text-xs text-neutral-500">
@@ -396,7 +414,7 @@ export default function DashboardPage() {
                 href="/"
                 className="flex items-center gap-3"
               >
-                {/* ONLY CHANGE: MOBILE DASHBOARD REST NOTE LOGO */}
+                {/* MOBILE REST NOTE LOGO */}
                 <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-neutral-700 bg-[#090909]">
                   <svg
                     viewBox="0 0 64 64"
@@ -466,7 +484,7 @@ export default function DashboardPage() {
             {/* TEAM LABEL */}
             <div className="mb-8">
               <p className="text-sm font-medium text-neutral-300">
-                KCCC Psalmist
+                {organizationName}
               </p>
 
               <p className="mt-1 text-xs text-neutral-600">
@@ -615,7 +633,7 @@ export default function DashboardPage() {
                 </p>
 
                 <p className="mt-1 text-xs text-neutral-600">
-                  KCCC Psalmist
+                  {organizationName}
                 </p>
               </Link>
             </section>
