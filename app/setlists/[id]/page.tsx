@@ -72,6 +72,9 @@ export default function SetlistDetailsPage() {
   const [currentRole, setCurrentRole] =
     useState<HimigRole>("Owner/Admin");
 
+  const [organizationId, setOrganizationId] =
+    useState<string | null>(null);
+
   const [songs, setSongs] = useState<Song[]>([]);
   const [setlist, setSetlist] =
     useState<Setlist | null>(null);
@@ -99,13 +102,17 @@ export default function SetlistDetailsPage() {
       try {
         const user = await getCurrentHimigUser();
 
-        if (user) {
-          setCurrentRole(user.role);
+        if (!user) {
+          setSetlist(null);
+          return;
         }
+
+        setCurrentRole(user.role);
+        setOrganizationId(user.organizationId);
 
         /*
          * Load the complete shared Song Library
-         * from Supabase.
+         * from the current organization.
          */
         const {
           data: songRows,
@@ -113,6 +120,7 @@ export default function SetlistDetailsPage() {
         } = await supabase
           .from("songs")
           .select("*")
+          .eq("organization_id", user.organizationId)
           .order("title", {
             ascending: true,
           });
@@ -153,8 +161,8 @@ export default function SetlistDetailsPage() {
         }
 
         /*
-         * Load the selected shared setlist.
-         */
+ * Load the selected shared setlist.
+ */
         const {
           data: setlistRow,
           error: setlistError,
@@ -164,6 +172,10 @@ export default function SetlistDetailsPage() {
             "id, name, service_date, description, created_by, created_at, updated_at"
           )
           .eq("id", setlistId)
+          .eq(
+            "organization_id",
+            user.organizationId
+          )
           .maybeSingle();
 
         if (setlistError) {
@@ -323,7 +335,7 @@ export default function SetlistDetailsPage() {
       string
     >
   ) {
-    if (!setlist) {
+    if (!setlist || !organizationId) {
       return;
     }
 
@@ -732,10 +744,10 @@ export default function SetlistDetailsPage() {
     songId: string
   ) {
     if (
-  !userCanReorder ||
-  !setlist
+      !userCanReorder ||
+      !setlist
 ) {
-  return;
+      return;
 }
 
     const actualIndex =
@@ -785,7 +797,8 @@ export default function SetlistDetailsPage() {
   async function deleteSetlist() {
     if (
       !userCanDeleteSetlist ||
-      !setlist
+      !setlist ||
+      !organizationId
     ) {
       return;
     }
@@ -829,14 +842,18 @@ export default function SetlistDetailsPage() {
       }
 
       /*
-       * Then remove the setlist itself.
-       */
+ * Then remove the setlist itself.
+ */
       const {
         error: setlistError,
       } = await supabase
         .from("setlists")
         .delete()
-        .eq("id", setlist.id);
+        .eq("id", setlist.id)
+        .eq(
+          "organization_id",
+          organizationId
+        );
 
       if (setlistError) {
         console.error(
