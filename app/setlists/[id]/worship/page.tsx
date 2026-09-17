@@ -12,6 +12,7 @@ import {
 
 import type { Song } from "../../../../lib/songs";
 import { createClient } from "../../../../lib/supabase";
+import { getCurrentHimigUser } from "../../../../lib/auth";
 
 type Setlist = {
   id: string;
@@ -81,6 +82,23 @@ export default function WorshipModePage() {
 
       try {
         /* -----------------------------------------
+        LOAD CURRENT HIMIG USER
+        ----------------------------------------- */
+
+        const currentUser =
+          await getCurrentHimigUser();
+
+        if (!currentUser) {
+          setSetlist(null);
+          setSongs([]);
+          setPersonalPreferences({});
+          return;
+        }
+
+        const organizationId =
+          currentUser.organizationId;
+
+        /* -----------------------------------------
         LOAD SETLIST
         ----------------------------------------- */
 
@@ -93,6 +111,10 @@ export default function WorshipModePage() {
             "id, name, service_date, description, created_at"
           )
           .eq("id", setlistId)
+          .eq(
+            "organization_id",
+            organizationId
+          )
           .maybeSingle();
 
         if (setlistError) {
@@ -226,7 +248,11 @@ export default function WorshipModePage() {
           .select(
             "id, title, artist, key, language, category, bpm, time_signature, lyrics, chords, number_code, tabs"
           )
-          .in("id", normalizedSongIds);
+          .in("id", normalizedSongIds)
+          .eq(
+            "organization_id",
+            organizationId
+          );
 
         if (songsError) {
           console.error(
