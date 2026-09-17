@@ -17,8 +17,8 @@ export default function MobileNavDrawer() {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
 
-  const touchStartX = useRef<number | null>(null);
-  const touchStartY = useRef<number | null>(null);
+  const startX = useRef<number | null>(null);
+  const startY = useRef<number | null>(null);
 
   useEffect(() => {
     const handleEscape = (event: KeyboardEvent) => {
@@ -34,41 +34,44 @@ export default function MobileNavDrawer() {
     };
   }, []);
 
-  const handleTouchStart = (event: React.TouchEvent) => {
-    const touch = event.touches[0];
-
-    touchStartX.current = touch.clientX;
-    touchStartY.current = touch.clientY;
-  };
-
-  const handleTouchEnd = (event: React.TouchEvent) => {
-    if (touchStartX.current === null || touchStartY.current === null) {
+  const handlePointerDown = (event: React.PointerEvent) => {
+    if (event.pointerType === "mouse") {
       return;
     }
 
-    const startX = touchStartX.current;
-    const startY = touchStartY.current;
+    startX.current = event.clientX;
+    startY.current = event.clientY;
+  };
 
-    const touch = event.changedTouches[0];
+  const handlePointerUp = (event: React.PointerEvent) => {
+    if (
+      startX.current === null ||
+      startY.current === null ||
+      event.pointerType === "mouse"
+    ) {
+      return;
+    }
 
-    const deltaX = touch.clientX - startX;
-    const deltaY = touch.clientY - startY;
+    const deltaX = event.clientX - startX.current;
+    const deltaY = event.clientY - startY.current;
 
-    touchStartX.current = null;
-    touchStartY.current = null;
+    const initialX = startX.current;
 
-    // Ignore vertical scrolling.
+    startX.current = null;
+    startY.current = null;
+
+    // Ignore normal vertical scrolling.
     if (Math.abs(deltaY) > Math.abs(deltaX)) {
       return;
     }
 
-    // Open drawer by swiping from the left edge.
-    if (!open && startX <= 32 && deltaX > 60) {
+    // Open from the left edge.
+    if (!open && initialX <= 48 && deltaX > 60) {
       setOpen(true);
       return;
     }
 
-    // Close drawer by swiping left.
+    // Close by swiping left.
     if (open && deltaX < -60) {
       setOpen(false);
     }
@@ -76,25 +79,27 @@ export default function MobileNavDrawer() {
 
   return (
     <>
-      {/* Invisible left-edge swipe area */}
+      {/* Mobile left-edge swipe zone */}
       {!open && (
         <div
-          className="fixed left-0 top-0 z-[90] h-full w-8 md:hidden"
-          onTouchStart={handleTouchStart}
-          onTouchEnd={handleTouchEnd}
+          className="fixed left-0 top-0 z-[90] h-full w-12 md:hidden"
+          style={{ touchAction: "pan-y" }}
+          onPointerDown={handlePointerDown}
+          onPointerUp={handlePointerUp}
           aria-hidden="true"
         />
       )}
 
-      {/* Mobile drawer */}
+      {/* Mobile navigation */}
       <div
         className={`fixed inset-0 z-[100] md:hidden ${
           open ? "pointer-events-auto" : "pointer-events-none"
         }`}
-        onTouchStart={handleTouchStart}
-        onTouchEnd={handleTouchEnd}
+        style={{ touchAction: "pan-y" }}
+        onPointerDown={handlePointerDown}
+        onPointerUp={handlePointerUp}
       >
-        {/* Dark overlay */}
+        {/* Backdrop */}
         <button
           type="button"
           aria-label="Close navigation"
