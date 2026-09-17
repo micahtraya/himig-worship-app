@@ -30,6 +30,12 @@ export default function SetlistsPage() {
   const [currentUserId, setCurrentUserId] =
     useState<string | null>(null);
 
+  const [organizationId, setOrganizationId] =
+    useState<string | null>(null);
+
+  const [organizationName, setOrganizationName] =
+    useState("KCCC Psalmist");
+
   const [setlists, setSetlists] =
     useState<Setlist[]>([]);
 
@@ -60,6 +66,8 @@ export default function SetlistsPage() {
 
         setCurrentRole(user.role);
         setCurrentUserId(user.id);
+        setOrganizationId(user.organizationId);
+        setOrganizationName(user.organizationName);
 
         const {
           data: setlistData,
@@ -69,6 +77,7 @@ export default function SetlistsPage() {
           .select(
             "id, name, service_date, description, created_by, created_at, updated_at"
           )
+          .eq("organization_id", user.organizationId)
           .order("created_at", {
             ascending: false,
           });
@@ -86,29 +95,46 @@ export default function SetlistsPage() {
           return;
         }
 
-        const {
-          data: setlistSongData,
-          error: setlistSongError,
-        } = await supabase
-          .from("setlist_songs")
-          .select(
-            "id, setlist_id, song_id, position, created_at"
-          )
-          .order("position", {
-            ascending: true,
-          });
+        const setlistIds = (setlistData ?? []).map(
+          (setlist) => setlist.id
+        );
 
-        if (setlistSongError) {
-          console.error(
-            "Unable to load setlist songs:",
-            setlistSongError
-          );
+        let setlistSongData: {
+          id: string;
+          setlist_id: string;
+          song_id: string;
+          position: number;
+          created_at: string;
+        }[] = [];
 
-          alert(
-            "Setlists loaded, but their songs could not be loaded."
-          );
+        if (setlistIds.length > 0) {
+          const {
+            data,
+            error: setlistSongError,
+          } = await supabase
+            .from("setlist_songs")
+            .select(
+              "id, setlist_id, song_id, position, created_at"
+            )
+            .in("setlist_id", setlistIds)
+            .order("position", {
+              ascending: true,
+            });
 
-          return;
+          if (setlistSongError) {
+            console.error(
+              "Unable to load setlist songs:",
+              setlistSongError
+            );
+
+            alert(
+              "Setlists loaded, but their songs could not be loaded."
+            );
+
+            return;
+          }
+
+          setlistSongData = data ?? [];
         }
 
         const songsBySetlist: Record<
@@ -119,7 +145,7 @@ export default function SetlistsPage() {
           }[]
         > = {};
 
-        for (const item of setlistSongData ?? []) {
+        for (const item of setlistSongData) {
           if (!songsBySetlist[item.setlist_id]) {
             songsBySetlist[item.setlist_id] = [];
           }
@@ -165,7 +191,10 @@ export default function SetlistsPage() {
     }
 
     void initializePage();
-  }, [supabase]);
+
+    // This page intentionally initializes once when mounted.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   async function createSetlist() {
     if (!canCreateSetlist(currentRole)) {
@@ -187,6 +216,13 @@ export default function SetlistsPage() {
       return;
     }
 
+    if (!organizationId) {
+      alert(
+        "Unable to identify your organization. Please sign in again."
+      );
+      return;
+    }
+
     setCreating(true);
 
     try {
@@ -198,6 +234,7 @@ export default function SetlistsPage() {
             service_date: date || null,
             description: notes.trim(),
             created_by: currentUserId,
+            organization_id: organizationId,
           })
           .select(
             "id, name, service_date, description, created_by, created_at, updated_at"
@@ -261,6 +298,13 @@ export default function SetlistsPage() {
       return;
     }
 
+    if (!organizationId) {
+      alert(
+        "Unable to identify your organization. Please sign in again."
+      );
+      return;
+    }
+
     const confirmed = window.confirm(
       "Are you sure you want to delete this setlist?"
     );
@@ -294,7 +338,11 @@ export default function SetlistsPage() {
         await supabase
           .from("setlists")
           .delete()
-          .eq("id", id);
+          .eq("id", id)
+          .eq(
+            "organization_id",
+            organizationId
+          );
 
       if (setlistError) {
         console.error(
@@ -376,6 +424,10 @@ export default function SetlistsPage() {
 
             <p className="mt-2 text-sm text-neutral-400">
               Create and manage your worship service setlists.
+            </p>
+
+            <p className="mt-1 text-xs text-neutral-500">
+              Team: {organizationName}
             </p>
           </div>
 
