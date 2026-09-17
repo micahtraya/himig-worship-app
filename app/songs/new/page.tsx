@@ -525,6 +525,9 @@ export default function NewSongPage() {
 
             created_by: user.id,
 
+            organization_id:
+              user.organizationId,
+
             updated_at:
               new Date().toISOString(),
           });
