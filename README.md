@@ -10,7 +10,17 @@ Built for **KCCC Psalmist**, HIMIG combines a modern web application experience 
 
 ## ✨ Features
 
+### Login / Authentication
+
+<img width="648" height="616" alt="image" src="https://github.com/user-attachments/assets/28f69148-3a06-4962-94ae-09d53b538ec7" />
+
+### Dashboard
+
+<img width="1746" height="882" alt="image" src="https://github.com/user-attachments/assets/0324cd31-31f0-406c-91ca-986499b2e051" />
+
 ### 🎵 Song Library
+
+<img width="1766" height="885" alt="image" src="https://github.com/user-attachments/assets/846c49c0-d203-4abb-9ec6-d1d2207c0d3a" />
 
 * Shared worship song library
 * Song details including:
@@ -31,6 +41,8 @@ Built for **KCCC Psalmist**, HIMIG combines a modern web application experience 
 
 ### 🎼 Chord & Key Transposition
 
+<img width="1088" height="824" alt="image" src="https://github.com/user-attachments/assets/90cfa3f5-abd1-4512-bf6b-8fc0df519c60" />
+
 HIMIG includes a dedicated chord engine that supports:
 
 * Key-aware chord transposition
@@ -44,6 +56,8 @@ HIMIG includes a dedicated chord engine that supports:
 This allows musicians to quickly adapt songs to the required service key.
 
 ### 📋 Setlists
+
+<img width="1053" height="372" alt="image" src="https://github.com/user-attachments/assets/90e47c77-6bb5-40da-97c6-2177c4b4d269" />
 
 Teams can create and manage shared worship setlists.
 
@@ -62,6 +76,8 @@ Setlist permissions are controlled according to the user's team role.
 
 ### 🎤 Worship Mode
 
+<img width="1066" height="885" alt="image" src="https://github.com/user-attachments/assets/007169e5-78ec-45a4-91e0-c60b75c4d98b" />
+
 Worship Mode provides a focused experience for using a setlist during a live worship service.
 
 It supports:
@@ -79,6 +95,9 @@ The chord engine allows the displayed music to be transposed without changing th
 
 ### 👥 Team Roles & Permissions
 
+<img width="648" height="758" alt="image" src="https://github.com/user-attachments/assets/f0e758fe-d421-45d0-b49d-d1a046e665ae" />
+<img width="838" height="870" alt="image" src="https://github.com/user-attachments/assets/25473270-c7df-4a36-a914-69a1d08050b3" />
+
 HIMIG uses role-based access control with four team roles:
 
 | Role               | Access                                                  |
@@ -95,9 +114,16 @@ Permissions are implemented in the application and supported by database securit
 Users can maintain personal worship resources including:
 
 * Favorites
-* Recently viewed songs
+  
+<img width="857" height="290" alt="image" src="https://github.com/user-attachments/assets/82d538bd-3266-443d-b9fd-570fb43e7e1c" />
+
 * Personal notes
+  
+  <img width="750" height="316" alt="image" src="https://github.com/user-attachments/assets/0839e75a-b314-47d0-a17d-074271e1fda1" />
+
 * Personal song preferences
+  
+<img width="798" height="763" alt="image" src="https://github.com/user-attachments/assets/fa5b69c7-0144-414c-8e5a-80fb950606fe" />
 
 These personal features are associated with the authenticated user.
 
@@ -106,6 +132,8 @@ These personal features are associated with the authenticated user.
 HIMIG includes a mobile-focused navigation experience designed for smartphones and tablets.
 
 Mobile users can:
+
+<img width="971" height="2048" alt="e27354bc-8bb8-4f2e-983f-5d0430a87f12" src="https://github.com/user-attachments/assets/d87d9119-beab-48b9-b690-b934c16bb8fd" />
 
 * Swipe from the left edge to open navigation
 * Swipe left to close the navigation drawer
