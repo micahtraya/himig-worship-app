@@ -1,4 +1,3 @@
-
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
@@ -90,23 +89,25 @@ export async function POST(
 
     /*
      * --------------------------------------------------
-     * 2. Verify Owner/Admin role
+     * 2. Verify Owner/Admin membership and get the
+     *    current organization
      * --------------------------------------------------
      */
 
     const {
-      data: currentProfile,
-      error: profileError,
+      data: currentMembership,
+      error: membershipError,
     } = await supabase
-      .from("profiles")
-      .select("role")
-      .eq("id", currentUser.id)
-      .single();
+      .from("organization_members")
+      .select("organization_id, role")
+      .eq("user_id", currentUser.id)
+      .eq("role", "Owner/Admin")
+      .limit(1)
+      .maybeSingle();
 
     if (
-      profileError ||
-      !currentProfile ||
-      currentProfile.role !== "Owner/Admin"
+      membershipError ||
+      !currentMembership
     ) {
       return NextResponse.json(
         {
@@ -118,6 +119,9 @@ export async function POST(
         }
       );
     }
+
+    const organizationId =
+      currentMembership.organization_id;
 
     /*
      * --------------------------------------------------
@@ -214,11 +218,6 @@ export async function POST(
      * --------------------------------------------------
      * 4. Create the Supabase Auth account
      * --------------------------------------------------
-     *
-     * email_confirm: true means the account does not
-     * depend on a Supabase invitation email.
-     *
-     * The Supabase secret key is used only on the server.
      */
 
     const adminSupabase =
@@ -266,6 +265,10 @@ export async function POST(
     /*
      * --------------------------------------------------
      * 5. Create the HIMIG profile
+     *
+     * Keep profiles.role synchronized for now because
+     * existing database security functions still use
+     * profiles.role.
      * --------------------------------------------------
      */
 
@@ -278,13 +281,6 @@ export async function POST(
         display_name: name,
         role,
       });
-
-    /*
-     * --------------------------------------------------
-     * 6. Roll back Auth account if profile creation
-     *    fails.
-     * --------------------------------------------------
-     */
 
     if (createProfileError) {
       console.error(
@@ -309,6 +305,58 @@ export async function POST(
 
     /*
      * --------------------------------------------------
+     * 6. Add the user to the current organization
+     * --------------------------------------------------
+     */
+
+    const {
+      error: createMembershipError,
+    } = await adminSupabase
+      .from("organization_members")
+      .insert({
+        organization_id: organizationId,
+        user_id: newUserId,
+        role,
+      });
+
+    if (createMembershipError) {
+      console.error(
+        "Unable to create HIMIG organization membership:",
+        createMembershipError
+      );
+
+      /*
+       * Roll back the profile first.
+       *
+       * The organization_members row was not created
+       * successfully, so there is nothing to remove
+       * there.
+       */
+      await adminSupabase
+        .from("profiles")
+        .delete()
+        .eq("id", newUserId);
+
+      /*
+       * Roll back the Auth account.
+       */
+      await adminSupabase.auth.admin.deleteUser(
+        newUserId
+      );
+
+      return NextResponse.json(
+        {
+          error:
+            "The team account could not be completed because its organization membership could not be created.",
+        },
+        {
+          status: 500,
+        }
+      );
+    }
+
+    /*
+     * --------------------------------------------------
      * 7. Success
      * --------------------------------------------------
      */
@@ -321,6 +369,7 @@ export async function POST(
           name,
           email,
           role,
+          organizationId,
         },
       },
       {
@@ -344,4 +393,3 @@ export async function POST(
     );
   }
 }
-

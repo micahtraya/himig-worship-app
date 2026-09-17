@@ -1,8 +1,12 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import Image from "next/image";
-import { useEffect, useState } from "react";
+import {
+  useEffect,
+  useState,
+  type FormEvent,
+} from "react";
 import {
   canManageTeam,
   type HimigRole,
@@ -23,6 +27,18 @@ type TeamMemberEmail = {
   email: string;
 };
 
+type OrganizationMemberRow = {
+  user_id: string;
+  role: string;
+  created_at: string;
+};
+
+type ProfileRow = {
+  id: string;
+  display_name: string | null;
+  created_at: string;
+};
+
 const ROLES: HimigRole[] = [
   "Owner/Admin",
   "Worship Leader",
@@ -38,299 +54,292 @@ const MEMBER_ROLES: HimigRole[] = [
 
 const ROLE_DESCRIPTIONS: Record<HimigRole, string> = {
   "Owner/Admin":
-    "Full access to songs, lyrics, music data, setlists, team members, and app settings.",
-
+    "Full access to songs, setlists, team members, and organization settings.",
   "Worship Leader":
-    "Can view, add, delete, and edit song lyrics, and prepare worship services.",
-
+    "Can manage songs with lyrics-focused editing and can create, edit, and delete shared setlists.",
   Musician:
-    "Can view, add, and delete songs and can generate and edit chords, number code, and tabs.",
-
+    "Can manage songs with chords, tabs, and Nashville Number Code editing and can create and edit shared setlists.",
   Viewer:
-    "View-only access to songs and setlists.",
+    "Read-only access to shared songs and setlists.",
 };
 
 const ROLE_PERMISSIONS: Record<HimigRole, string[]> = {
   "Owner/Admin": [
-    "View Songs",
-    "Add Songs",
-    "Delete Songs",
-    "Edit Lyrics",
-    "Generate Music Data",
-    "Edit Chords",
-    "Edit Number Code",
-    "Edit Tabs",
-    "Manage Team",
+    "View songs",
+    "Create songs",
+    "Edit songs",
+    "Delete songs",
+    "View setlists",
+    "Create setlists",
+    "Edit setlists",
+    "Delete setlists",
+    "Manage team",
   ],
-
   "Worship Leader": [
-    "View Songs",
-    "Add Songs",
-    "Delete Songs",
-    "Edit Lyrics",
-    "View Music Data",
-    "Manage Setlists",
+    "View songs",
+    "Create songs",
+    "Edit lyrics",
+    "Delete songs",
+    "View setlists",
+    "Create setlists",
+    "Edit setlists",
+    "Delete setlists",
   ],
-
   Musician: [
-    "View Songs",
-    "Add Songs",
-    "Delete Songs",
-    "Generate Music Data",
-    "Edit Chords",
-    "Edit Number Code",
-    "Edit Tabs",
+    "View songs",
+    "Create songs",
+    "Edit chords",
+    "Edit tabs",
+    "Edit Nashville Number Code",
+    "Delete songs",
+    "View setlists",
+    "Create setlists",
+    "Edit setlists",
   ],
-
   Viewer: [
-    "View Songs",
-    "View Setlists",
+    "View songs",
+    "View setlists",
   ],
 };
 
 const ROLE_STYLES: Record<HimigRole, string> = {
   "Owner/Admin":
-    "border-neutral-700 bg-neutral-800 text-white",
-
+    "border-purple-400/30 bg-purple-500/10 text-purple-300",
   "Worship Leader":
-    "border-neutral-700 bg-neutral-800 text-white",
-
+    "border-blue-400/30 bg-blue-500/10 text-blue-300",
   Musician:
-    "border-neutral-700 bg-neutral-800 text-white",
-
+    "border-cyan-400/30 bg-cyan-500/10 text-cyan-300",
   Viewer:
-    "border-neutral-700 bg-neutral-800 text-neutral-300",
+    "border-zinc-500/30 bg-zinc-500/10 text-zinc-300",
 };
 
-function isValidRole(
-  role: string | null
-): role is HimigRole {
-  return (
-    role === "Owner/Admin" ||
-    role === "Worship Leader" ||
-    role === "Musician" ||
-    role === "Viewer"
-  );
-}
-
 export default function TeamPage() {
-  const [members, setMembers] =
-    useState<TeamMember[]>([]);
+  const supabase = createClient();
 
-  const [currentUserId, setCurrentUserId] =
-    useState<string | null>(null);
-
+  const [members, setMembers] = useState<TeamMember[]>([]);
+  const [currentUserId, setCurrentUserId] = useState<
+    string | null
+  >(null);
   const [currentRole, setCurrentRole] =
     useState<HimigRole>("Viewer");
+  const [organizationName, setOrganizationName] =
+    useState("KCCC Psalmist");
 
   const [selectedRole, setSelectedRole] =
     useState<HimigRole>("Owner/Admin");
 
   const [newMemberName, setNewMemberName] =
     useState("");
-
   const [newMemberEmail, setNewMemberEmail] =
     useState("");
-
   const [newMemberPassword, setNewMemberPassword] =
     useState("");
-
   const [newMemberRole, setNewMemberRole] =
     useState<HimigRole>("Worship Leader");
 
   const [creatingMember, setCreatingMember] =
     useState(false);
-
   const [createMemberMessage, setCreateMemberMessage] =
     useState("");
-
   const [createMemberError, setCreateMemberError] =
     useState("");
 
   const [removingMemberId, setRemovingMemberId] =
     useState<string | null>(null);
-
   const [removeMemberMessage, setRemoveMemberMessage] =
     useState("");
-
   const [removeMemberError, setRemoveMemberError] =
     useState("");
 
-  const [loading, setLoading] =
-    useState(true);
+  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    async function loadTeam() {
-      const supabase = createClient();
+  async function loadTeam() {
+    setLoading(true);
 
-      try {
-        const currentUser =
-          await getCurrentHimigUser();
+    try {
+      const currentUser = await getCurrentHimigUser();
 
-        if (!currentUser) {
-          setCurrentRole("Viewer");
-          setCurrentUserId(null);
-          setMembers([]);
-          return;
-        }
+      if (!currentUser) {
+        setCurrentUserId(null);
+        setCurrentRole("Viewer");
+        setOrganizationName("KCCC Psalmist");
+        setMembers([]);
+        return;
+      }
 
-        setCurrentUserId(currentUser.id);
-        setCurrentRole(currentUser.role);
+      setCurrentUserId(currentUser.id);
+      setCurrentRole(currentUser.role);
+      setOrganizationName(currentUser.organizationName);
 
-        /*
-         * Load the team profiles using the normal
-         * authenticated Supabase client.
-         *
-         * This preserves the existing Team page
-         * behavior for every HIMIG role.
-         */
-        const {
-          data,
-          error,
-        } = await supabase
-          .from("profiles")
-          .select(
-            "id, display_name, role, created_at"
-          )
-          .order("created_at", {
-            ascending: true,
-          });
+      const {
+        data: memberships,
+        error: membershipError,
+      } = await supabase
+        .from("organization_members")
+        .select("user_id, role, created_at")
+        .eq(
+          "organization_id",
+          currentUser.organizationId
+        )
+        .order("created_at", {
+          ascending: true,
+        });
 
-        if (error) {
-          console.error(
-            "Unable to load team members:",
-            error
-          );
-
-          setMembers([]);
-          return;
-        }
-
-        /*
-         * Build the initial team list.
-         *
-         * Other members temporarily use "Team account".
-         * Owner/Admin email information will be replaced
-         * below using the secure server-side API.
-         */
-        let loadedMembers: TeamMember[] =
-          (data ?? [])
-            .filter(
-              (member) =>
-                isValidRole(member.role)
-            )
-            .map((member) => ({
-              id: member.id,
-              name:
-                member.display_name ||
-                "HIMIG User",
-              email:
-                member.id === currentUser.id
-                  ? currentUser.email ||
-                    "Current account"
-                  : "Team account",
-              role: member.role,
-              createdAt: member.created_at,
-            }));
-
-        /*
-         * Owner/Admin can securely retrieve the
-         * actual Auth email addresses.
-         *
-         * The SUPABASE_SECRET_KEY remains entirely
-         * on the server inside /api/team/members.
-         */
-        if (
-          canManageTeam(currentUser.role)
-        ) {
-          try {
-            const response = await fetch(
-              "/api/team/members",
-              {
-                method: "GET",
-                cache: "no-store",
-              }
-            );
-
-            if (response.ok) {
-              const result =
-                await response.json();
-
-              const emailByUserId =
-                new Map<
-                  string,
-                  string
-                >();
-
-              const emailMembers =
-                Array.isArray(
-                  result.members
-                )
-                  ? (result.members as TeamMemberEmail[])
-                  : [];
-
-              emailMembers.forEach(
-                (member) => {
-                  if (
-                    member.id &&
-                    member.email
-                  ) {
-                    emailByUserId.set(
-                      member.id,
-                      member.email
-                    );
-                  }
-                }
-              );
-
-              loadedMembers =
-                loadedMembers.map(
-                  (member) => ({
-                    ...member,
-                    email:
-                      emailByUserId.get(
-                        member.id
-                      ) ||
-                      member.email,
-                  })
-                );
-            } else {
-              console.error(
-                "Unable to load team member emails."
-              );
-            }
-          } catch (error) {
-            console.error(
-              "Unable to load team member emails:",
-              error
-            );
-          }
-        }
-
-        setMembers(loadedMembers);
-      } catch (error) {
+      if (membershipError) {
         console.error(
-          "Unable to load HIMIG team:",
-          error
+          "Unable to load organization members:",
+          membershipError
+        );
+        setMembers([]);
+        return;
+      }
+
+      const organizationMemberships =
+        (memberships ??
+          []) as OrganizationMemberRow[];
+
+      const memberIds =
+        organizationMemberships.map(
+          (membership) => membership.user_id
         );
 
+      if (memberIds.length === 0) {
         setMembers([]);
-      } finally {
-        setLoading(false);
+        return;
       }
-    }
 
-    loadTeam();
-  }, []);
+      const {
+        data: profiles,
+        error: profilesError,
+      } = await supabase
+        .from("profiles")
+        .select(
+          "id, display_name, created_at"
+        )
+        .in("id", memberIds);
+
+      if (profilesError) {
+        console.error(
+          "Unable to load team profiles:",
+          profilesError
+        );
+        setMembers([]);
+        return;
+      }
+
+      const profileRows =
+        (profiles ?? []) as ProfileRow[];
+
+      const profileMap = new Map(
+        profileRows.map((profile) => [
+          profile.id,
+          profile,
+        ])
+      );
+
+      let loadedMembers: TeamMember[] =
+        organizationMemberships
+          .map((membership) => {
+            const profile = profileMap.get(
+              membership.user_id
+            );
+
+            if (!profile) {
+              return null;
+            }
+
+            return {
+              id: profile.id,
+              name:
+                profile.display_name ||
+                "Unnamed Member",
+              email:
+                profile.id === currentUser.id
+                  ? currentUser.email
+                  : "",
+              role: membership.role as HimigRole,
+              createdAt:
+                membership.created_at,
+            };
+          })
+          .filter(
+            (
+              member
+            ): member is TeamMember =>
+              member !== null
+          );
+
+      if (canManageTeam(currentUser.role)) {
+        try {
+          const response = await fetch(
+            "/api/team/members"
+          );
+
+          if (response.ok) {
+            const result =
+              (await response.json()) as {
+                members?: TeamMemberEmail[];
+              };
+
+            const emailMap = new Map(
+              (result.members ?? []).map(
+                (member) => [
+                  member.id,
+                  member.email,
+                ]
+              )
+            );
+
+            loadedMembers =
+              loadedMembers.map((member) => ({
+                ...member,
+                email:
+                  emailMap.get(member.id) ??
+                  member.email,
+              }));
+          }
+        } catch (error) {
+          console.error(
+            "Unable to load team member emails:",
+            error
+          );
+        }
+      }
+
+      setMembers(loadedMembers);
+    } catch (error) {
+      console.error(
+        "Unable to load HIMIG team:",
+        error
+      );
+      setMembers([]);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+  const timer = window.setTimeout(() => {
+    void loadTeam();
+  }, 0);
+
+  return () => {
+    window.clearTimeout(timer);
+  };
+
+  // This page intentionally loads the current team once
+  // when it mounts.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, []);
 
   async function handleCreateMember(
-    event: React.FormEvent<HTMLFormElement>
+    event: FormEvent<HTMLFormElement>
   ) {
     event.preventDefault();
 
     if (!canManageTeam(currentRole)) {
       setCreateMemberError(
-        "You do not have permission to create team accounts."
+        "You do not have permission to manage team members."
       );
       return;
     }
@@ -345,54 +354,50 @@ export default function TeamPage() {
         {
           method: "POST",
           headers: {
-            "Content-Type":
-              "application/json",
+            "Content-Type": "application/json",
           },
           body: JSON.stringify({
             name: newMemberName.trim(),
-            email: newMemberEmail
-              .trim()
-              .toLowerCase(),
+            email: newMemberEmail.trim(),
             password: newMemberPassword,
             role: newMemberRole,
           }),
         }
       );
 
-      const result =
-        await response.json();
+      const result = await response.json();
 
       if (!response.ok) {
         setCreateMemberError(
           result.error ||
-            "Unable to create the team member account."
+            "Unable to create this team member."
         );
         return;
       }
 
-      const createdMember: TeamMember = {
-        id: result.member.id,
-        name: result.member.name,
-        email: result.member.email,
-        role: result.member.role,
-        createdAt:
-          new Date().toISOString(),
-      };
+      if (result.member) {
+        const newMember: TeamMember = {
+          id: result.member.id,
+          name: result.member.name,
+          email: result.member.email,
+          role: result.member.role as HimigRole,
+          createdAt:
+            new Date().toISOString(),
+        };
 
-      setMembers((currentMembers) => [
-        ...currentMembers,
-        createdMember,
-      ]);
+        setMembers((currentMembers) => [
+          ...currentMembers,
+          newMember,
+        ]);
+      }
 
       setNewMemberName("");
       setNewMemberEmail("");
       setNewMemberPassword("");
-      setNewMemberRole(
-        "Worship Leader"
-      );
+      setNewMemberRole("Worship Leader");
 
       setCreateMemberMessage(
-        `${createdMember.name} has been added to the HIMIG team.`
+        "Team member created successfully."
       );
     } catch (error) {
       console.error(
@@ -401,7 +406,7 @@ export default function TeamPage() {
       );
 
       setCreateMemberError(
-        "Unable to create the team member account."
+        "Unable to create this team member."
       );
     } finally {
       setCreatingMember(false);
@@ -446,18 +451,48 @@ export default function TeamPage() {
       return;
     }
 
-    const supabase = createClient();
+    try {
+      const response = await fetch(
+        "/api/team/role",
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            userId: id,
+            role: newRole,
+          }),
+        }
+      );
 
-    const { error } = await supabase
-      .from("profiles")
-      .update({
-        role: newRole,
-        updated_at:
-          new Date().toISOString(),
-      })
-      .eq("id", id);
+      const result = await response.json();
 
-    if (error) {
+      if (!response.ok) {
+        console.error(
+          "Unable to update team member role:",
+          result
+        );
+
+        alert(
+          result.error ||
+            "Unable to update this team member's role."
+        );
+
+        return;
+      }
+
+      setMembers((currentMembers) =>
+        currentMembers.map((item) =>
+          item.id === id
+            ? {
+                ...item,
+                role: newRole,
+              }
+            : item
+        )
+      );
+    } catch (error) {
       console.error(
         "Unable to update team member role:",
         error
@@ -466,24 +501,12 @@ export default function TeamPage() {
       alert(
         "Unable to update this team member's role."
       );
-
-      return;
     }
-
-    setMembers((currentMembers) =>
-      currentMembers.map((item) =>
-        item.id === id
-          ? {
-              ...item,
-              role: newRole,
-            }
-          : item
-      )
-    );
   }
 
   async function handleDeleteMember(
-    id: string
+    id: string,
+    name: string
   ) {
     if (!canManageTeam(currentRole)) {
       alert(
@@ -494,7 +517,7 @@ export default function TeamPage() {
 
     if (id === currentUserId) {
       alert(
-        "Your Owner/Admin account cannot be removed from the Team page."
+        "You cannot delete your own Owner/Admin account from the Team page."
       );
       return;
     }
@@ -507,8 +530,15 @@ export default function TeamPage() {
       return;
     }
 
+    if (member.role === "Owner/Admin") {
+      alert(
+        "Owner/Admin accounts cannot be deleted from the Team page."
+      );
+      return;
+    }
+
     const confirmed = window.confirm(
-      `Remove ${member.name} from the HIMIG team? This will permanently remove their HIMIG login account.`
+      `Remove ${name} from ${organizationName}? This will permanently delete their HIMIG account.`
     );
 
     if (!confirmed) {
@@ -525,8 +555,7 @@ export default function TeamPage() {
         {
           method: "DELETE",
           headers: {
-            "Content-Type":
-              "application/json",
+            "Content-Type": "application/json",
           },
           body: JSON.stringify({
             userId: id,
@@ -534,13 +563,12 @@ export default function TeamPage() {
         }
       );
 
-      const result =
-        await response.json();
+      const result = await response.json();
 
       if (!response.ok) {
         setRemoveMemberError(
           result.error ||
-            "Unable to remove the team member."
+            "Unable to remove this team member."
         );
         return;
       }
@@ -552,7 +580,7 @@ export default function TeamPage() {
       );
 
       setRemoveMemberMessage(
-        `${member.name} has been removed from the HIMIG team.`
+        `${name} was removed from the team.`
       );
     } catch (error) {
       console.error(
@@ -561,762 +589,520 @@ export default function TeamPage() {
       );
 
       setRemoveMemberError(
-        "Unable to remove the team member."
+        "Unable to remove this team member."
       );
     } finally {
       setRemovingMemberId(null);
     }
   }
 
-  const userCanManageTeam =
-    canManageTeam(currentRole);
+  const selectedRoleDescription =
+    ROLE_DESCRIPTIONS[selectedRole];
 
   return (
-    <div className="min-h-screen bg-[#090909] text-white">
+    <div className="min-h-screen bg-[#05070a] text-white">
+      <aside className="fixed left-0 top-0 hidden h-screen w-64 border-r border-white/10 bg-[#080b10] lg:block">
+        <div className="flex h-full flex-col">
+          <div className="flex items-center gap-3 border-b border-white/10 px-6 py-5">
+            <Image
+              src="/himig-icon-192.png"
+              alt="REST NOTE"
+              width={42}
+              height={42}
+              className="rounded-xl"
+            />
 
-      <div className="flex min-h-screen">
+            <div>
+              <div className="text-lg font-bold tracking-wide">
+                REST NOTE
+              </div>
+              <div className="text-xs text-zinc-500">
+                HIMIG
+              </div>
+            </div>
+          </div>
 
-        {/* SIDEBAR */}
-        <aside className="hidden w-64 shrink-0 border-r border-neutral-800 bg-[#090909] md:flex md:flex-col">
-
-          {/* LOGO */}
-          <div className="border-b border-neutral-800 px-6 py-6">
-
+          <nav className="flex-1 space-y-1 px-3 py-5">
             <Link
               href="/"
-              className="block"
+              className="flex items-center gap-3 rounded-xl px-4 py-3 text-sm text-zinc-400 transition hover:bg-white/5 hover:text-white"
             >
-              <div className="flex items-center gap-3">
-
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-neutral-700 bg-neutral-900 overflow-hidden">
-                  <Image
-    src="/icon.svg"
-    alt="HIMIG"
-    width={40}
-    height={40}
-    className="h-10 w-10"
-  />
-                </div>
-
-                <div>
-                  <h1 className="font-serif text-2xl font-semibold italic tracking-wide text-white">
-                    HIMIG
-                  </h1>
-
-                  <p className="text-xs text-neutral-500">
-                    Praise and Worship
-                  </p>
-                </div>
-
-              </div>
+              <span className="text-lg">
+                ⌂
+              </span>
+              Dashboard
             </Link>
 
-          </div>
-
-          {/* MENU */}
-          <div className="px-4 py-5">
-
-            <p className="mb-3 px-3 text-[11px] font-semibold uppercase tracking-wider text-neutral-600">
-              Menu
-            </p>
-
-            <nav className="space-y-1">
-
-              <Link
-                href="/"
-                className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm text-neutral-400 transition hover:bg-neutral-900 hover:text-white"
-              >
-                <span className="flex w-5 justify-center text-lg">
-                  ⌂
-                </span>
-                Dashboard
-              </Link>
-
-              <Link
-                href="/songs"
-                className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm text-neutral-400 transition hover:bg-neutral-900 hover:text-white"
-              >
-                <span className="flex w-5 justify-center text-lg">
-                  ♫
-                </span>
-                Song Library
-              </Link>
-
-              <Link
-                href="/setlists"
-                className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm text-neutral-400 transition hover:bg-neutral-900 hover:text-white"
-              >
-                <span className="flex w-5 justify-center text-lg">
-                  ☰
-                </span>
-                Setlists
-              </Link>
-
-              <Link
-                href="/favorites"
-                className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm text-neutral-400 transition hover:bg-neutral-900 hover:text-white"
-              >
-                <span className="flex w-5 justify-center text-lg">
-                  ♡
-                </span>
-                Favorites
-              </Link>
-
-              <Link
-                href="/team"
-                className="flex items-center gap-3 rounded-xl bg-neutral-800 px-3 py-3 text-sm font-semibold text-white"
-              >
-                <span className="flex w-5 justify-center text-lg">
-                  ♙
-                </span>
-                Team
-              </Link>
-
-            </nav>
-
-          </div>
-
-          {/* CURRENT TEAM */}
-          <div className="mt-auto border-t border-neutral-800 p-4">
-
-            <div className="rounded-xl border border-neutral-800 bg-neutral-900 p-4">
-
-              <p className="text-xs text-neutral-600">
-                Current Team
-              </p>
-
-              <p className="mt-1 font-semibold text-white">
-                KCCC Psalmist
-              </p>
-
-              <p className="mt-1 text-xs text-neutral-500">
-                {currentRole}
-              </p>
-
-            </div>
-
-          </div>
-
-        </aside>
-
-        {/* MAIN */}
-        <main className="min-w-0 flex-1">
-
-          {/* MOBILE HEADER */}
-          <header className="border-b border-neutral-800 bg-[#090909] md:hidden">
-
-            <div className="flex items-center justify-between px-5 py-4">
-
-              <Link
-                href="/"
-                className="flex items-center gap-3"
-              >
-
-                <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-neutral-700 bg-neutral-900 overflow-hidden">
-                  <Image
-    src="/icon.svg"
-    alt="HIMIG"
-    width={36}
-    height={36}
-    className="h-9 w-9"
-  />
-                </div>
-
-                <div>
-
-                  <p className="font-serif text-xl font-semibold italic">
-                    HIMIG
-                  </p>
-
-                  <p className="text-[10px] text-neutral-500">
-                    Praise and Worship
-                  </p>
-
-                </div>
-
-              </Link>
-
-              <Link
-                href="/"
-                className="rounded-lg border border-neutral-700 px-3 py-2 text-xs text-neutral-400 transition hover:bg-neutral-900 hover:text-white"
-              >
-                Home
-              </Link>
-
-            </div>
-
-          </header>
-
-          {/* CONTENT */}
-          <div className="mx-auto max-w-7xl px-5 py-8 md:px-8 md:py-10">
-
-            {/* HEADER */}
-            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-
-              <div className="flex items-center gap-3">
-
-                <div className="flex h-11 w-11 items-center justify-center rounded-xl border border-neutral-800 bg-neutral-900 text-xl text-neutral-300">
-                  ♙
-                </div>
-
-                <div>
-
-                  <h1 className="text-3xl font-bold tracking-tight">
-                    Team
-                  </h1>
-
-                  <p className="mt-1 text-sm text-neutral-500">
-                    Manage your KCCC Psalmist worship team.
-                  </p>
-
-                </div>
-
-              </div>
-
-            </div>
-
-            {/* CURRENT ROLE */}
-            <div className="mt-6 rounded-2xl border border-neutral-800 bg-neutral-900 p-6">
-
-              <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
-
-                <div className="flex items-center gap-3">
-
-                  <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-neutral-800 text-lg text-neutral-300">
-                    ♙
-                  </div>
-
-                  <div>
-
-                    <p className="text-xs uppercase tracking-wide text-neutral-600">
-                      Current HIMIG Role
-                    </p>
-
-                    <p className="mt-1 font-semibold text-white">
-                      {currentRole}
-                    </p>
-
-                  </div>
-
-                </div>
-
-                <div className="max-w-lg text-sm leading-6 text-neutral-500">
-                  Your role controls which features and
-                  song content you can access in HIMIG.
-                </div>
-
-              </div>
-
-              {/* CURRENT ROLE DETAILS */}
-              <div className="mt-5">
-
-                <div className="rounded-xl border border-neutral-800 bg-[#090909] p-5">
-
-                  <p className="text-sm font-semibold text-white">
-                    {ROLE_DESCRIPTIONS[currentRole]}
-                  </p>
-
-                  <div className="mt-4 flex flex-wrap gap-2">
-
-                    {ROLE_PERMISSIONS[currentRole].map(
-                      (permission) => (
-                        <span
-                          key={permission}
-                          className="rounded-full border border-neutral-800 bg-neutral-900 px-3 py-1.5 text-xs text-neutral-400"
-                        >
-                          {permission}
-                        </span>
-                      )
-                    )}
-
-                  </div>
-
-                  {currentRole === "Owner/Admin" && (
-                    <p className="mt-4 text-xs leading-5 text-neutral-600">
-                      Your Owner/Admin role is protected and
-                      cannot be changed from this page.
-                    </p>
-                  )}
-
-                </div>
-
-              </div>
-
-            </div>
-
-            {/* CREATE TEAM MEMBER */}
-            {userCanManageTeam && (
-              <div className="mt-8 rounded-2xl border border-neutral-800 bg-neutral-900 p-6">
-
-                <div>
-
-                  <h2 className="text-xl font-semibold">
-                    Add Team Member
-                  </h2>
-
-                  <p className="mt-1 text-sm leading-6 text-neutral-500">
-                    Create an individual HIMIG account and assign
-                    their team role.
-                  </p>
-
-                </div>
-
-                <form
-                  onSubmit={handleCreateMember}
-                  className="mt-6 grid gap-5 lg:grid-cols-2"
-                >
-
-                  {/* NAME */}
-                  <div>
-
-                    <label
-                      htmlFor="new-member-name"
-                      className="mb-2 block text-sm font-medium text-neutral-300"
-                    >
-                      Name
-                    </label>
-
-                    <input
-                      id="new-member-name"
-                      type="text"
-                      value={newMemberName}
-                      onChange={(event) =>
-                        setNewMemberName(
-                          event.target.value
-                        )
-                      }
-                      placeholder="Team member name"
-                      required
-                      className="w-full rounded-xl border border-neutral-700 bg-[#090909] px-4 py-3 text-white outline-none placeholder:text-neutral-700 transition focus:border-neutral-400"
-                    />
-
-                  </div>
-
-                  {/* EMAIL */}
-                  <div>
-
-                    <label
-                      htmlFor="new-member-email"
-                      className="mb-2 block text-sm font-medium text-neutral-300"
-                    >
-                      Email
-                    </label>
-
-                    <input
-                      id="new-member-email"
-                      type="email"
-                      value={newMemberEmail}
-                      onChange={(event) =>
-                        setNewMemberEmail(
-                          event.target.value
-                        )
-                      }
-                      placeholder="member@example.com"
-                      autoComplete="off"
-                      required
-                      className="w-full rounded-xl border border-neutral-700 bg-[#090909] px-4 py-3 text-white outline-none placeholder:text-neutral-700 transition focus:border-neutral-400"
-                    />
-
-                  </div>
-
-                  {/* PASSWORD */}
-                  <div>
-
-                    <label
-                      htmlFor="new-member-password"
-                      className="mb-2 block text-sm font-medium text-neutral-300"
-                    >
-                      Temporary Password
-                    </label>
-
-                    <input
-                      id="new-member-password"
-                      type="password"
-                      value={newMemberPassword}
-                      onChange={(event) =>
-                        setNewMemberPassword(
-                          event.target.value
-                        )
-                      }
-                      placeholder="At least 8 characters"
-                      autoComplete="new-password"
-                      minLength={8}
-                      required
-                      className="w-full rounded-xl border border-neutral-700 bg-[#090909] px-4 py-3 text-white outline-none placeholder:text-neutral-700 transition focus:border-neutral-400"
-                    />
-
-                  </div>
-
-                  {/* ROLE */}
-                  <div>
-
-                    <label
-                      htmlFor="new-member-role"
-                      className="mb-2 block text-sm font-medium text-neutral-300"
-                    >
-                      Role
-                    </label>
-
-                    <select
-                      id="new-member-role"
-                      value={newMemberRole}
-                      onChange={(event) =>
-                        setNewMemberRole(
-                          event.target.value as HimigRole
-                        )
-                      }
-                      className="w-full rounded-xl border border-neutral-700 bg-[#090909] px-4 py-3 text-white outline-none transition focus:border-neutral-400"
-                    >
-                      {MEMBER_ROLES.map(
-                        (role) => (
-                          <option
-                            key={role}
-                            value={role}
-                          >
-                            {role}
-                          </option>
-                        )
-                      )}
-                    </select>
-
-                  </div>
-
-                  {/* MESSAGES */}
-                  {createMemberError && (
-                    <div className="lg:col-span-2 rounded-xl border border-red-900/60 bg-red-950/30 px-4 py-3 text-sm leading-6 text-red-300">
-                      {createMemberError}
-                    </div>
-                  )}
-
-                  {createMemberMessage && (
-                    <div className="lg:col-span-2 rounded-xl border border-neutral-700 bg-neutral-800 px-4 py-3 text-sm leading-6 text-neutral-300">
-                      {createMemberMessage}
-                    </div>
-                  )}
-
-                  {/* BUTTON */}
-                  <div className="lg:col-span-2">
-
-                    <button
-                      type="submit"
-                      disabled={creatingMember}
-                      className="rounded-xl bg-white px-5 py-3.5 text-sm font-semibold text-black transition hover:bg-neutral-200 disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                      {creatingMember
-                        ? "Creating account..."
-                        : "Create Team Member"}
-                    </button>
-
-                  </div>
-
-                </form>
-
-                <p className="mt-4 text-xs leading-5 text-neutral-600">
-                  The account is created directly by the
-                  Owner/Admin. No invitation email is required.
-                  Give the team member their HIMIG email and
-                  temporary password securely.
-                </p>
-
-              </div>
-            )}
-
-            {/* REMOVE MESSAGES */}
-            {removeMemberError && (
-              <div className="mt-6 rounded-xl border border-red-900/60 bg-red-950/30 px-4 py-3 text-sm leading-6 text-red-300">
-                {removeMemberError}
-              </div>
-            )}
-
-            {removeMemberMessage && (
-              <div className="mt-6 rounded-xl border border-neutral-700 bg-neutral-800 px-4 py-3 text-sm leading-6 text-neutral-300">
-                {removeMemberMessage}
-              </div>
-            )}
-
-            {/* TEAM COUNT */}
-            <div className="mt-8 flex items-center gap-2 text-sm text-neutral-500">
-
+            <Link
+              href="/songs"
+              className="flex items-center gap-3 rounded-xl px-4 py-3 text-sm text-zinc-400 transition hover:bg-white/5 hover:text-white"
+            >
+              <span className="text-lg">
+                ♫
+              </span>
+              Song Library
+            </Link>
+
+            <Link
+              href="/setlists"
+              className="flex items-center gap-3 rounded-xl px-4 py-3 text-sm text-zinc-400 transition hover:bg-white/5 hover:text-white"
+            >
+              <span className="text-lg">
+                ☰
+              </span>
+              Setlists
+            </Link>
+
+            <Link
+              href="/favorites"
+              className="flex items-center gap-3 rounded-xl px-4 py-3 text-sm text-zinc-400 transition hover:bg-white/5 hover:text-white"
+            >
+              <span className="text-lg">
+                ♡
+              </span>
+              Favorites
+            </Link>
+
+            <Link
+              href="/team"
+              className="flex items-center gap-3 rounded-xl bg-white/10 px-4 py-3 text-sm font-medium text-white"
+            >
               <span className="text-lg">
                 ♙
               </span>
+              Team
+            </Link>
+          </nav>
 
-              <span>
-                Team Members
-              </span>
+          <div className="border-t border-white/10 px-5 py-5">
+            <div className="mb-1 text-xs uppercase tracking-wider text-zinc-500">
+              Current Team
+            </div>
+            <div className="truncate text-sm font-medium text-white">
+              {organizationName}
+            </div>
+            <div className="mt-1 text-xs text-zinc-500">
+              {currentRole}
+            </div>
+          </div>
+        </div>
+      </aside>
 
-              <span className="font-semibold text-white">
-                {members.length}
-              </span>
-
+      <main className="min-h-screen lg:pl-64">
+        <div className="mx-auto max-w-7xl px-5 py-8 sm:px-8 lg:px-10">
+          <div className="mb-8">
+            <div className="mb-2 text-sm text-cyan-400">
+              {organizationName}
             </div>
 
-            {/* MEMBERS */}
-            <div className="mt-4 space-y-4">
-
-              {loading ? (
-
-                <div className="rounded-2xl border border-neutral-800 bg-neutral-900 p-10 text-center">
-
-                  <p className="text-sm text-neutral-500">
-                    Loading team members...
-                  </p>
-
-                </div>
-
-              ) : members.length === 0 ? (
-
-                <div className="rounded-2xl border border-dashed border-neutral-700 bg-neutral-900 p-10 text-center">
-
-                  <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-neutral-800 text-xl text-neutral-400">
-                    ♙
-                  </div>
-
-                  <h2 className="mt-4 text-lg font-semibold">
-                    No team members yet
-                  </h2>
-
-                  <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-neutral-500">
-                    Create your first team member account
-                    using the Add Team Member section above.
-                  </p>
-
-                </div>
-
-              ) : (
-
-                members.map((member) => (
-
-                  <div
-                    key={member.id}
-                    className="rounded-2xl border border-neutral-800 bg-neutral-900 p-5 transition hover:border-neutral-700"
-                  >
-
-                    <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
-
-                      {/* MEMBER INFO */}
-                      <div className="flex min-w-0 items-start gap-4">
-
-                        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-neutral-800 text-lg text-neutral-400">
-                          ♙
-                        </div>
-
-                        <div className="min-w-0">
-
-                          <h2 className="text-lg font-semibold text-white">
-                            {member.name}
-                          </h2>
-
-                          <p className="mt-1 truncate text-sm text-neutral-500">
-                            {member.email}
-                          </p>
-
-                          <div className="mt-3">
-
-                            <span
-                              className={`inline-flex rounded-full border px-3 py-1 text-xs font-medium ${
-                                ROLE_STYLES[member.role]
-                              }`}
-                            >
-                              {member.role}
-                            </span>
-
-                          </div>
-
-                        </div>
-
-                      </div>
-
-                      {/* MEMBER ACTIONS */}
-                      {userCanManageTeam &&
-                        member.id !== currentUserId && (
-                          <div className="flex flex-col gap-2 sm:flex-row">
-
-                            <select
-                              value={member.role}
-                              onChange={(event) =>
-                                handleMemberRoleChange(
-                                  member.id,
-                                  event.target
-                                    .value as HimigRole
-                                )
-                              }
-                              disabled={
-                                removingMemberId ===
-                                member.id
-                              }
-                              className="rounded-xl border border-neutral-700 bg-[#090909] px-4 py-2.5 text-sm text-white outline-none transition focus:border-neutral-500 disabled:cursor-not-allowed disabled:opacity-50"
-                              aria-label={`Change role for ${member.name}`}
-                            >
-                              {ROLES.filter(
-                                (role) =>
-                                  role !==
-                                  "Owner/Admin"
-                              ).map(
-                                (item) => (
-                                  <option
-                                    key={item}
-                                    value={item}
-                                  >
-                                    {item}
-                                  </option>
-                                )
-                              )}
-                            </select>
-
-                            <button
-                              type="button"
-                              onClick={() =>
-                                handleDeleteMember(
-                                  member.id
-                                )
-                              }
-                              disabled={
-                                removingMemberId ===
-                                member.id
-                              }
-                              className="rounded-xl border border-red-900/60 bg-red-950/40 px-4 py-2.5 text-sm font-medium text-red-300 transition hover:bg-red-950 disabled:cursor-not-allowed disabled:opacity-50"
-                            >
-                              {removingMemberId ===
-                              member.id
-                                ? "Removing..."
-                                : "Remove"}
-                            </button>
-
-                          </div>
-                        )}
-
-                    </div>
-
-                    {/* OWNER/ADMIN PROTECTION */}
-                    {member.id === currentUserId &&
-                      member.role ===
-                        "Owner/Admin" && (
-                        <div className="mt-5 rounded-xl border border-neutral-800 bg-[#090909] p-4">
-
-                          <p className="text-xs uppercase tracking-wide text-neutral-600">
-                            Account Protection
-                          </p>
-
-                          <p className="mt-2 text-sm leading-6 text-neutral-400">
-                            This Owner/Admin account is the
-                            current administrative account.
-                            Its role cannot be changed or
-                            removed from the Team page.
-                          </p>
-
-                        </div>
-                      )}
-
-                    {/* ROLE DESCRIPTION */}
-                    <div className="mt-5 rounded-xl border border-neutral-800 bg-[#090909] p-4">
-
-                      <p className="text-xs uppercase tracking-wide text-neutral-600">
-                        Role Access
-                      </p>
-
-                      <p className="mt-2 text-sm leading-6 text-neutral-400">
-                        {ROLE_DESCRIPTIONS[
-                          member.role
-                        ]}
-                      </p>
-
-                    </div>
-
-                  </div>
-
-                ))
-
-              )}
-
-            </div>
-
-            {/* ROLE GUIDE */}
-            <div className="mt-10">
-
+            <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
               <div>
-
-                <h2 className="text-xl font-semibold">
-                  HIMIG Role Guide
-                </h2>
-
-                <p className="mt-1 text-sm text-neutral-500">
-                  The four roles available to your worship team.
+                <h1 className="text-3xl font-bold tracking-tight">
+                  Team Members
+                </h1>
+                <p className="mt-2 text-sm text-zinc-400">
+                  Manage members and organization roles for{" "}
+                  {organizationName}.
                 </p>
-
               </div>
 
-              <div className="mt-5 grid gap-4 lg:grid-cols-2">
-
-                {ROLES.map((item) => (
-
-                  <button
-                    key={item}
-                    type="button"
-                    onClick={() =>
-                      setSelectedRole(item)
-                    }
-                    className={`text-left rounded-2xl border p-5 transition ${
-                      selectedRole === item
-                        ? "border-neutral-600 bg-neutral-900"
-                        : "border-neutral-800 bg-neutral-900 hover:border-neutral-700"
-                    }`}
-                  >
-
-                    <div className="flex items-center justify-between gap-3">
-
-                      <span
-                        className={`rounded-full border px-3 py-1 text-xs font-medium ${
-                          ROLE_STYLES[item]
-                        }`}
-                      >
-                        {item}
-                      </span>
-
-                      {selectedRole === item && (
-                        <span className="text-xs text-neutral-500">
-                          Selected
-                        </span>
-                      )}
-
-                    </div>
-
-                    <p className="mt-4 text-sm leading-6 text-neutral-400">
-                      {ROLE_DESCRIPTIONS[item]}
-                    </p>
-
-                    <div className="mt-4 flex flex-wrap gap-2">
-
-                      {ROLE_PERMISSIONS[item].map(
-                        (permission) => (
-                          <span
-                            key={permission}
-                            className="rounded-full border border-neutral-800 bg-neutral-950 px-3 py-1 text-xs text-neutral-500"
-                          >
-                            {permission}
-                          </span>
-                        )
-                      )}
-
-                    </div>
-
-                  </button>
-
-                ))}
-
+              <div
+                className={`inline-flex w-fit items-center rounded-full border px-3 py-1.5 text-xs font-medium ${ROLE_STYLES[currentRole]}`}
+              >
+                {currentRole}
               </div>
-
             </div>
-
           </div>
 
-        </main>
+          {loading ? (
+            <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-8 text-center text-sm text-zinc-400">
+              Loading team members...
+            </div>
+          ) : (
+            <div className="grid gap-6 xl:grid-cols-[1.5fr_1fr]">
+              <section className="rounded-2xl border border-white/10 bg-white/[0.03]">
+                <div className="border-b border-white/10 px-5 py-5">
+                  <div className="flex items-center justify-between gap-4">
+                    <div>
+                      <h2 className="font-semibold">
+                        Team
+                      </h2>
+                      <p className="mt-1 text-xs text-zinc-500">
+                        {members.length} member
+                        {members.length === 1
+                          ? ""
+                          : "s"}
+                      </p>
+                    </div>
 
-      </div>
+                    {canManageTeam(currentRole) && (
+                      <div className="text-xs text-zinc-500">
+                        Owner/Admin access
+                      </div>
+                    )}
+                  </div>
+                </div>
 
+                <div className="divide-y divide-white/10">
+                  {members.length === 0 ? (
+                    <div className="px-5 py-10 text-center text-sm text-zinc-500">
+                      No team members found.
+                    </div>
+                  ) : (
+                    members.map((member) => {
+                      const isCurrentUser =
+                        member.id === currentUserId;
+
+                      const canChangeRole =
+                        canManageTeam(currentRole) &&
+                        !isCurrentUser &&
+                        member.role !==
+                          "Owner/Admin";
+
+                      const canDelete =
+                        canManageTeam(currentRole) &&
+                        !isCurrentUser &&
+                        member.role !==
+                          "Owner/Admin";
+
+                      return (
+                        <div
+                          key={member.id}
+                          className="flex flex-col gap-4 px-5 py-5 sm:flex-row sm:items-center sm:justify-between"
+                        >
+                          <div className="min-w-0">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <div className="truncate font-medium">
+                                {member.name}
+                              </div>
+
+                              {isCurrentUser && (
+                                <span className="rounded-full border border-cyan-400/20 bg-cyan-400/10 px-2 py-0.5 text-[10px] font-medium text-cyan-300">
+                                  You
+                                </span>
+                              )}
+                            </div>
+
+                            <div className="mt-1 truncate text-xs text-zinc-500">
+                              {member.email ||
+                                "Email unavailable"}
+                            </div>
+
+                            <div className="mt-2">
+                              <span
+                                className={`inline-flex rounded-full border px-2.5 py-1 text-[11px] font-medium ${ROLE_STYLES[member.role]}`}
+                              >
+                                {member.role}
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="flex flex-wrap items-center gap-2">
+                            {canChangeRole ? (
+                              <select
+                                value={member.role}
+                                onChange={(event) =>
+                                  void handleMemberRoleChange(
+                                    member.id,
+                                    event.target
+                                      .value as HimigRole
+                                  )
+                                }
+                                className="min-h-11 rounded-xl border border-white/10 bg-[#0b0f14] px-3 text-sm text-white outline-none transition focus:border-cyan-400/40"
+                                aria-label={`Change role for ${member.name}`}
+                              >
+                                {MEMBER_ROLES.map(
+                                  (role) => (
+                                    <option
+                                      key={role}
+                                      value={role}
+                                    >
+                                      {role}
+                                    </option>
+                                  )
+                                )}
+                              </select>
+                            ) : (
+                              <span className="text-xs text-zinc-600">
+                                {member.role ===
+                                "Owner/Admin"
+                                  ? "Protected"
+                                  : "No permission"}
+                              </span>
+                            )}
+
+                            {canDelete && (
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  void handleDeleteMember(
+                                    member.id,
+                                    member.name
+                                  )
+                                }
+                                disabled={
+                                  removingMemberId ===
+                                  member.id
+                                }
+                                className="min-h-11 rounded-xl border border-red-400/20 px-3 text-sm text-red-300 transition hover:bg-red-400/10 disabled:cursor-not-allowed disabled:opacity-50"
+                              >
+                                {removingMemberId ===
+                                member.id
+                                  ? "Removing..."
+                                  : "Remove"}
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </section>
+
+              <div className="space-y-6">
+                {canManageTeam(currentRole) && (
+                  <section className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
+                    <div className="mb-5">
+                      <h2 className="font-semibold">
+                        Add Team Member
+                      </h2>
+                      <p className="mt-1 text-xs text-zinc-500">
+                        Create a new HIMIG account for{" "}
+                        {organizationName}.
+                      </p>
+                    </div>
+
+                    <form
+                      onSubmit={handleCreateMember}
+                      className="space-y-4"
+                    >
+                      <div>
+                        <label
+                          htmlFor="member-name"
+                          className="mb-2 block text-xs font-medium text-zinc-400"
+                        >
+                          Name
+                        </label>
+
+                        <input
+                          id="member-name"
+                          type="text"
+                          value={newMemberName}
+                          onChange={(event) =>
+                            setNewMemberName(
+                              event.target.value
+                            )
+                          }
+                          required
+                          className="min-h-11 w-full rounded-xl border border-white/10 bg-[#0b0f14] px-3 text-sm text-white outline-none placeholder:text-zinc-600 focus:border-cyan-400/40"
+                          placeholder="Team member name"
+                        />
+                      </div>
+
+                      <div>
+                        <label
+                          htmlFor="member-email"
+                          className="mb-2 block text-xs font-medium text-zinc-400"
+                        >
+                          Email
+                        </label>
+
+                        <input
+                          id="member-email"
+                          type="email"
+                          value={newMemberEmail}
+                          onChange={(event) =>
+                            setNewMemberEmail(
+                              event.target.value
+                            )
+                          }
+                          required
+                          className="min-h-11 w-full rounded-xl border border-white/10 bg-[#0b0f14] px-3 text-sm text-white outline-none placeholder:text-zinc-600 focus:border-cyan-400/40"
+                          placeholder="member@example.com"
+                        />
+                      </div>
+
+                      <div>
+                        <label
+                          htmlFor="member-password"
+                          className="mb-2 block text-xs font-medium text-zinc-400"
+                        >
+                          Temporary Password
+                        </label>
+
+                        <input
+                          id="member-password"
+                          type="password"
+                          value={newMemberPassword}
+                          onChange={(event) =>
+                            setNewMemberPassword(
+                              event.target.value
+                            )
+                          }
+                          required
+                          minLength={6}
+                          className="min-h-11 w-full rounded-xl border border-white/10 bg-[#0b0f14] px-3 text-sm text-white outline-none placeholder:text-zinc-600 focus:border-cyan-400/40"
+                          placeholder="Create a temporary password"
+                        />
+                      </div>
+
+                      <div>
+                        <label
+                          htmlFor="member-role"
+                          className="mb-2 block text-xs font-medium text-zinc-400"
+                        >
+                          Role
+                        </label>
+
+                        <select
+                          id="member-role"
+                          value={newMemberRole}
+                          onChange={(event) =>
+                            setNewMemberRole(
+                              event.target
+                                .value as HimigRole
+                            )
+                          }
+                          className="min-h-11 w-full rounded-xl border border-white/10 bg-[#0b0f14] px-3 text-sm text-white outline-none focus:border-cyan-400/40"
+                        >
+                          {MEMBER_ROLES.map(
+                            (role) => (
+                              <option
+                                key={role}
+                                value={role}
+                              >
+                                {role}
+                              </option>
+                            )
+                          )}
+                        </select>
+                      </div>
+
+                      <div className="rounded-xl border border-white/10 bg-black/20 p-4">
+                        <div className="text-sm font-medium">
+                          {newMemberRole}
+                        </div>
+
+                        <p className="mt-1 text-xs leading-5 text-zinc-500">
+                          {
+                            ROLE_DESCRIPTIONS[
+                              newMemberRole
+                            ]
+                          }
+                        </p>
+                      </div>
+
+                      {createMemberMessage && (
+                        <div className="rounded-xl border border-emerald-400/20 bg-emerald-400/10 px-4 py-3 text-sm text-emerald-300">
+                          {createMemberMessage}
+                        </div>
+                      )}
+
+                      {createMemberError && (
+                        <div className="rounded-xl border border-red-400/20 bg-red-400/10 px-4 py-3 text-sm text-red-300">
+                          {createMemberError}
+                        </div>
+                      )}
+
+                      <button
+                        type="submit"
+                        disabled={creatingMember}
+                        className="min-h-11 w-full rounded-xl bg-cyan-400 px-4 text-sm font-semibold text-black transition hover:bg-cyan-300 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        {creatingMember
+                          ? "Creating..."
+                          : "Create Team Member"}
+                      </button>
+                    </form>
+                  </section>
+                )}
+
+                <section className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
+                  <div className="mb-5">
+                    <h2 className="font-semibold">
+                      Role Permissions
+                    </h2>
+                    <p className="mt-1 text-xs text-zinc-500">
+                      Review what each HIMIG role can access.
+                    </p>
+                  </div>
+
+                  <div className="mb-4">
+                    <label
+                      htmlFor="permission-role"
+                      className="mb-2 block text-xs font-medium text-zinc-400"
+                    >
+                      Select Role
+                    </label>
+
+                    <select
+                      id="permission-role"
+                      value={selectedRole}
+                      onChange={(event) =>
+                        setSelectedRole(
+                          event.target
+                            .value as HimigRole
+                        )
+                      }
+                      className="min-h-11 w-full rounded-xl border border-white/10 bg-[#0b0f14] px-3 text-sm text-white outline-none focus:border-cyan-400/40"
+                    >
+                      {ROLES.map((role) => (
+                        <option
+                          key={role}
+                          value={role}
+                        >
+                          {role}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div
+                    className={`rounded-xl border p-4 ${ROLE_STYLES[selectedRole]}`}
+                  >
+                    <div className="font-medium">
+                      {selectedRole}
+                    </div>
+
+                    <p className="mt-2 text-xs leading-5 opacity-80">
+                      {selectedRoleDescription}
+                    </p>
+                  </div>
+
+                  <div className="mt-4 space-y-2">
+                    {ROLE_PERMISSIONS[
+                      selectedRole
+                    ].map((permission) => (
+                      <div
+                        key={permission}
+                        className="flex items-start gap-2 text-xs text-zinc-400"
+                      >
+                        <span className="mt-0.5 text-cyan-400">
+                          ✓
+                        </span>
+                        <span>{permission}</span>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+
+                {removeMemberMessage && (
+                  <div className="rounded-xl border border-emerald-400/20 bg-emerald-400/10 px-4 py-3 text-sm text-emerald-300">
+                    {removeMemberMessage}
+                  </div>
+                )}
+
+                {removeMemberError && (
+                  <div className="rounded-xl border border-red-400/20 bg-red-400/10 px-4 py-3 text-sm text-red-300">
+                    {removeMemberError}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      </main>
     </div>
   );
 }
-
-
-
