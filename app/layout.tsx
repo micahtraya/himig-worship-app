@@ -1,158 +1,73 @@
-"use client";
 
-import { useEffect, useRef, useState } from "react";
-import Link from "next/link";
+import type { Metadata, Viewport } from "next";
+import { Geist, Geist_Mono } from "next/font/google";
+import "./globals.css";
+import MobileNavDrawer from "@/components/MobileNavDrawer";
 
-const navigation = [
-  { label: "Dashboard", href: "/" },
-  { label: "Song Library", href: "/songs" },
-  { label: "Setlists", href: "/setlists" },
-  { label: "Favorites", href: "/favorites" },
-  { label: "Team", href: "/team" },
-];
+const geistSans = Geist({
+  variable: "--font-geist-sans",
+  subsets: ["latin"],
+});
 
-export default function MobileNavDrawer() {
-  const [open, setOpen] = useState(false);
+const geistMono = Geist_Mono({
+  variable: "--font-geist-mono",
+  subsets: ["latin"],
+});
 
-  const touchStartX = useRef<number | null>(null);
-  const touchStartY = useRef<number | null>(null);
+export const metadata: Metadata = {
+  title: "HIMIG — KCCC Psalmist",
+  description: "HIMIG Worship Songbook for KCCC Psalmist.",
+  applicationName: "HIMIG",
 
-  useEffect(() => {
-    const handleEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        setOpen(false);
-      }
-    };
+  icons: {
+    icon: [
+      {
+        url: "/himig-icon-192.png",
+        sizes: "192x192",
+        type: "image/png",
+      },
+      {
+        url: "/himig-icon-512.png",
+        sizes: "512x512",
+        type: "image/png",
+      },
+    ],
+    apple: [
+      {
+        url: "/himig-icon-192.png",
+        sizes: "192x192",
+        type: "image/png",
+      },
+    ],
+  },
 
-    document.addEventListener("keydown", handleEscape);
+  appleWebApp: {
+    capable: true,
+    title: "HIMIG",
+    statusBarStyle: "black-translucent",
+  },
+};
 
-    return () => {
-      document.removeEventListener("keydown", handleEscape);
-    };
-  }, []);
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  themeColor: "#090909",
+};
 
-  const handleTouchStart = (event: React.TouchEvent) => {
-    const touch = event.touches[0];
-
-    touchStartX.current = touch.clientX;
-    touchStartY.current = touch.clientY;
-  };
-
-  const handleTouchEnd = (event: React.TouchEvent) => {
-    if (touchStartX.current === null || touchStartY.current === null) {
-      return;
-    }
-
-    const startX = touchStartX.current;
-    const startY = touchStartY.current;
-
-    const touch = event.changedTouches[0];
-
-    const deltaX = touch.clientX - startX;
-    const deltaY = touch.clientY - startY;
-
-    touchStartX.current = null;
-    touchStartY.current = null;
-
-    // Ignore vertical scrolling gestures.
-    if (Math.abs(deltaY) > Math.abs(deltaX)) {
-      return;
-    }
-
-    // Swipe right from the left edge to open.
-    if (!open && startX <= 32 && deltaX > 60) {
-      setOpen(true);
-      return;
-    }
-
-    // Swipe left to close.
-    if (open && deltaX < -60) {
-      setOpen(false);
-    }
-  };
-
+export default function RootLayout({
+  children,
+}: LayoutProps<"/">) {
   return (
-    <>
-      {/* Mobile left-edge swipe area */}
-      {!open && (
-        <div
-          className="fixed left-0 top-0 z-[90] h-full w-8 md:hidden"
-          onTouchStart={handleTouchStart}
-          onTouchEnd={handleTouchEnd}
-          aria-hidden="true"
-        />
-      )}
+    <html
+      lang="en"
+      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+    >
+      <body className="min-h-full flex flex-col">
+        {children}
 
-      {/* Mobile navigation drawer */}
-      <div
-        className={`fixed inset-0 z-[100] md:hidden ${
-          open ? "pointer-events-auto" : "pointer-events-none"
-        }`}
-        onTouchStart={handleTouchStart}
-        onTouchEnd={handleTouchEnd}
-      >
-        {/* Dark backdrop */}
-        <button
-          type="button"
-          aria-label="Close navigation"
-          className={`absolute inset-0 bg-black/60 transition-opacity duration-300 ${
-            open ? "opacity-100" : "opacity-0"
-          }`}
-          onClick={() => setOpen(false)}
-        />
-
-        {/* Drawer */}
-        <aside
-          className={`absolute left-0 top-0 flex h-full w-[280px] max-w-[82vw] flex-col border-r border-white/10 bg-[#090909] shadow-2xl transition-transform duration-300 ease-out ${
-            open ? "translate-x-0" : "-translate-x-full"
-          }`}
-          onClick={(event) => event.stopPropagation()}
-        >
-          {/* REST NOTE / HIMIG branding */}
-          <div className="flex items-center gap-3 border-b border-white/10 px-5 py-5">
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-cyan-400/30 bg-cyan-400/10">
-              <span className="text-xl text-cyan-300">♪</span>
-            </div>
-
-            <div className="min-w-0">
-              <div className="text-sm font-semibold tracking-[0.18em] text-cyan-300">
-                REST NOTE
-              </div>
-
-              <div className="text-lg font-bold text-white">
-                HIMIG
-              </div>
-
-              <div className="text-xs text-zinc-400">
-                Praise and Worship
-              </div>
-            </div>
-          </div>
-
-          {/* Navigation links */}
-          <nav className="flex-1 overflow-y-auto px-3 py-4">
-            <div className="space-y-1">
-              {navigation.map((item) => (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  onClick={() => setOpen(false)}
-                  className="flex min-h-12 items-center rounded-xl px-4 text-sm font-medium text-zinc-300 transition-colors hover:bg-white/5 hover:text-white"
-                >
-                  {item.label}
-                </Link>
-              ))}
-            </div>
-          </nav>
-
-          {/* Swipe hint */}
-          <div className="border-t border-white/10 px-5 py-4">
-            <p className="text-xs text-zinc-500">
-              Swipe left to close
-            </p>
-          </div>
-        </aside>
-      </div>
-    </>
+        <MobileNavDrawer />
+      </body>
+    </html>
   );
 }
