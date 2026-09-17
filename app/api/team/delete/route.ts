@@ -70,22 +70,34 @@ export async function DELETE(
     }
 
     /*
-     * Verify that the current user is
-     * an Owner/Admin.
+     * Verify that the current user is an
+     * Owner/Admin of an organization.
+     *
+     * The organization membership is the
+     * authoritative organization relationship.
      */
     const {
-      data: currentProfile,
-      error: profileError,
+      data: currentMembership,
+      error: membershipError,
     } = await supabase
-      .from("profiles")
-      .select("role")
-      .eq("id", currentUser.id)
-      .single();
+      .from("organization_members")
+      .select(
+        "organization_id, role"
+      )
+      .eq(
+        "user_id",
+        currentUser.id
+      )
+      .eq(
+        "role",
+        "Owner/Admin"
+      )
+      .limit(1)
+      .maybeSingle();
 
     if (
-      profileError ||
-      !currentProfile ||
-      currentProfile.role !== "Owner/Admin"
+      membershipError ||
+      !currentMembership
     ) {
       return NextResponse.json(
         {
@@ -97,6 +109,9 @@ export async function DELETE(
         }
       );
     }
+
+    const organizationId =
+      currentMembership.organization_id;
 
     /*
      * Read the target user ID from
@@ -147,6 +162,66 @@ export async function DELETE(
       createAdminClient();
 
     /*
+     * IMPORTANT:
+     * Verify that the target user belongs to
+     * the CURRENT organization before performing
+     * any destructive action.
+     */
+    const {
+      data: targetMembership,
+      error: targetMembershipError,
+    } =
+      await adminSupabase
+        .from("organization_members")
+        .select(
+          "user_id, role"
+        )
+        .eq(
+          "organization_id",
+          organizationId
+        )
+        .eq(
+          "user_id",
+          targetUserId
+        )
+        .maybeSingle();
+
+    if (
+      targetMembershipError ||
+      !targetMembership
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "The selected team member does not belong to your organization.",
+        },
+        {
+          status: 404,
+        }
+      );
+    }
+
+    /*
+     * Extra protection:
+     * an Owner/Admin account cannot be removed
+     * through this Team page.
+     */
+    if (
+      targetMembership.role ===
+      "Owner/Admin"
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "Owner/Admin accounts cannot be removed from the Team page.",
+        },
+        {
+          status: 400,
+        }
+      );
+    }
+
+    /*
      * Verify that the target profile exists
      * before deleting the Auth account.
      */
@@ -156,8 +231,13 @@ export async function DELETE(
     } =
       await adminSupabase
         .from("profiles")
-        .select("id, display_name, role")
-        .eq("id", targetUserId)
+        .select(
+          "id, display_name, role"
+        )
+        .eq(
+          "id",
+          targetUserId
+        )
         .single();
 
     if (
@@ -176,9 +256,9 @@ export async function DELETE(
     }
 
     /*
-     * Extra protection:
-     * an Owner/Admin account cannot be removed
-     * through this Team page.
+     * Existing HIMIG security functions still
+     * use profiles.role, so keep this protection
+     * as an additional consistency check.
      */
     if (
       targetProfile.role ===
@@ -230,12 +310,10 @@ export async function DELETE(
     /*
      * Clean up the corresponding HIMIG profile.
      *
-     * In many Supabase setups the profile row
-     * may already be removed through a foreign-key
-     * cascade when auth.users is deleted.
-     *
-     * We therefore attempt the cleanup and do not
-     * treat an already-missing profile as a failure.
+     * The organization_members row references
+     * profiles(id) with ON DELETE CASCADE, so
+     * removing the profile also removes the
+     * organization membership.
      */
     const {
       error: deleteProfileError,
@@ -243,7 +321,10 @@ export async function DELETE(
       await adminSupabase
         .from("profiles")
         .delete()
-        .eq("id", targetUserId);
+        .eq(
+          "id",
+          targetUserId
+        );
 
     if (deleteProfileError) {
       console.error(
@@ -270,7 +351,8 @@ export async function DELETE(
           name:
             targetProfile.display_name ||
             "HIMIG User",
-          role: targetProfile.role,
+          role:
+            targetProfile.role,
         },
       },
       {

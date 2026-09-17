@@ -72,24 +72,34 @@ export async function GET() {
     }
 
     /*
-     * Verify that the current user is Owner/Admin.
+     * Find the current user's Owner/Admin
+     * organization membership.
      *
-     * Only Owner/Admin should receive the team
-     * member email information from this endpoint.
+     * This determines which organization this
+     * endpoint is allowed to expose.
      */
     const {
-      data: currentProfile,
-      error: profileError,
+      data: currentMembership,
+      error: membershipError,
     } = await supabase
-      .from("profiles")
-      .select("role")
-      .eq("id", currentUser.id)
-      .single();
+      .from("organization_members")
+      .select(
+        "organization_id, role"
+      )
+      .eq(
+        "user_id",
+        currentUser.id
+      )
+      .eq(
+        "role",
+        "Owner/Admin"
+      )
+      .limit(1)
+      .maybeSingle();
 
     if (
-      profileError ||
-      !currentProfile ||
-      currentProfile.role !== "Owner/Admin"
+      membershipError ||
+      !currentMembership
     ) {
       return NextResponse.json(
         {
@@ -102,6 +112,9 @@ export async function GET() {
       );
     }
 
+    const organizationId =
+      currentMembership.organization_id;
+
     /*
      * Use the server-side Admin client.
      *
@@ -112,7 +125,76 @@ export async function GET() {
       createAdminClient();
 
     /*
-     * Get all HIMIG profiles.
+     * Get ONLY the profiles that belong to
+     * the current organization.
+     *
+     * organization_members is the authoritative
+     * organization membership relationship.
+     */
+    const {
+      data: organizationMembers,
+      error: organizationMembersError,
+    } =
+      await adminSupabase
+        .from("organization_members")
+        .select(
+          "user_id, role, created_at"
+        )
+        .eq(
+          "organization_id",
+          organizationId
+        )
+        .order("created_at", {
+          ascending: true,
+        });
+
+    if (
+      organizationMembersError
+    ) {
+      console.error(
+        "Unable to load organization members:",
+        organizationMembersError
+      );
+
+      return NextResponse.json(
+        {
+          error:
+            "Unable to load team members.",
+        },
+        {
+          status: 500,
+        }
+      );
+    }
+
+    /*
+     * If the organization has no members,
+     * return an empty team safely.
+     */
+    if (
+      !organizationMembers ||
+      organizationMembers.length === 0
+    ) {
+      return NextResponse.json(
+        {
+          success: true,
+          members: [],
+        },
+        {
+          status: 200,
+        }
+      );
+    }
+
+    const memberUserIds =
+      organizationMembers.map(
+        (member) =>
+          member.user_id
+      );
+
+    /*
+     * Get profile information ONLY for users
+     * belonging to this organization.
      */
     const {
       data: profiles,
@@ -123,9 +205,10 @@ export async function GET() {
         .select(
           "id, display_name, role, created_at"
         )
-        .order("created_at", {
-          ascending: true,
-        });
+        .in(
+          "id",
+          memberUserIds
+        );
 
     if (profilesError) {
       console.error(
@@ -149,6 +232,9 @@ export async function GET() {
      *
      * We collect all users so the Team page does
      * not miss members when the team grows.
+     *
+     * The final result is still restricted to
+     * organization member IDs below.
      */
     const authUsers = [];
     let page = 1;
@@ -215,27 +301,73 @@ export async function GET() {
     });
 
     /*
-     * Combine profile information with the
-     * corresponding Auth email.
+     * Create a quick profile lookup table.
+     */
+    const profileByUserId =
+      new Map<
+        string,
+        {
+          id: string;
+          display_name: string | null;
+          role: string | null;
+          created_at: string;
+        }
+      >();
+
+    (profiles ?? []).forEach(
+      (profile) => {
+        profileByUserId.set(
+          profile.id,
+          profile
+        );
+      }
+    );
+
+    /*
+     * Build the final organization-scoped
+     * member list.
      *
-     * Only safe member information is returned.
+     * organization_members determines who belongs
+     * to the organization.
+     *
+     * profiles provides the display information.
+     *
+     * Auth provides the email address.
      */
     const members =
-      (profiles ?? []).map(
-        (profile) => ({
-          id: profile.id,
-          name:
-            profile.display_name ||
-            "HIMIG User",
-          email:
-            emailByUserId.get(
-              profile.id
-            ) || "Team account",
-          role: profile.role,
-          createdAt:
-            profile.created_at,
+      organizationMembers
+        .map((membership) => {
+          const profile =
+            profileByUserId.get(
+              membership.user_id
+            );
+
+          if (!profile) {
+            return null;
+          }
+
+          return {
+            id: profile.id,
+            name:
+              profile.display_name ||
+              "HIMIG User",
+            email:
+              emailByUserId.get(
+                profile.id
+              ) ||
+              "Team account",
+            role: membership.role,
+            createdAt:
+              profile.created_at,
+          };
         })
-      );
+        .filter(
+          (
+            member
+          ): member is NonNullable<
+            typeof member
+          > => member !== null
+        );
 
     return NextResponse.json(
       {
