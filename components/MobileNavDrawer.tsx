@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
@@ -54,18 +54,15 @@ export default function MobileNavDrawer() {
     touchStartX.current = null;
     touchStartY.current = null;
 
-    // Ignore vertical scrolling gestures.
     if (Math.abs(deltaY) > Math.abs(deltaX)) {
       return;
     }
 
-    // Swipe right from the left edge to open.
     if (!open && startX <= 32 && deltaX > 60) {
       setOpen(true);
       return;
     }
 
-    // Swipe left to close.
     if (open && deltaX < -60) {
       setOpen(false);
     }
@@ -73,7 +70,6 @@ export default function MobileNavDrawer() {
 
   return (
     <>
-      {/* Mobile left-edge swipe area */}
       {!open && (
         <div
           className="fixed left-0 top-0 z-[90] h-full w-8 md:hidden"
@@ -83,7 +79,6 @@ export default function MobileNavDrawer() {
         />
       )}
 
-      {/* Mobile navigation drawer */}
       <div
         className={`fixed inset-0 z-[100] md:hidden ${
           open ? "pointer-events-auto" : "pointer-events-none"
@@ -91,7 +86,6 @@ export default function MobileNavDrawer() {
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
       >
-        {/* Dark backdrop */}
         <button
           type="button"
           aria-label="Close navigation"
@@ -101,14 +95,12 @@ export default function MobileNavDrawer() {
           onClick={() => setOpen(false)}
         />
 
-        {/* Drawer */}
         <aside
           className={`absolute left-0 top-0 flex h-full w-[280px] max-w-[82vw] flex-col border-r border-white/10 bg-[#090909] shadow-2xl transition-transform duration-300 ease-out ${
             open ? "translate-x-0" : "-translate-x-full"
           }`}
           onClick={(event) => event.stopPropagation()}
         >
-          {/* REST NOTE / HIMIG branding */}
           <div className="flex items-center gap-3 border-b border-white/10 px-5 py-5">
             <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-cyan-400/30 bg-cyan-400/10">
               <span className="text-xl text-cyan-300">♪</span>
@@ -129,7 +121,6 @@ export default function MobileNavDrawer() {
             </div>
           </div>
 
-          {/* Navigation links */}
           <nav className="flex-1 overflow-y-auto px-3 py-4">
             <div className="space-y-1">
               {navigation.map((item) => (
@@ -145,7 +136,6 @@ export default function MobileNavDrawer() {
             </div>
           </nav>
 
-          {/* Swipe hint */}
           <div className="border-t border-white/10 px-5 py-4">
             <p className="text-xs text-zinc-500">
               Swipe left to close
